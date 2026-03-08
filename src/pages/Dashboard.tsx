@@ -167,7 +167,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-
+          {loading ? (
             <div className="text-center py-12 text-muted-foreground animate-pulse">
               Loading your websites...
             </div>
