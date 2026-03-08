@@ -1,13 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Globe, Plus, Eye, Pencil, RefreshCw, ExternalLink, Trash2, CreditCard, CalendarClock, User } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Globe, Plus, Eye, Pencil, RefreshCw, ExternalLink, Trash2, CreditCard, CalendarClock, Search, Settings } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
-import ProfileEditor from "@/components/ProfileEditor";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,6 +41,8 @@ const Dashboard = () => {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const fetchWebsites = async () => {
     if (!user) return;
@@ -82,7 +85,6 @@ const Dashboard = () => {
       toast.error("Failed to regenerate");
     } else {
       toast.success("Regeneration started!");
-      // Poll for update
       const poll = setInterval(async () => {
         const { data } = await supabase
           .from("websites")
@@ -107,6 +109,14 @@ const Dashboard = () => {
     }
   };
 
+  const filteredWebsites = useMemo(() => {
+    return websites.filter((site) => {
+      const matchesSearch = !search || site.name.toLowerCase().includes(search.toLowerCase()) || site.subdomain.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = statusFilter === "all" || site.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [websites, search, statusFilter]);
+
   const statusStyles = (status: string) => {
     switch (status) {
       case "live":
@@ -130,20 +140,18 @@ const Dashboard = () => {
               <h1 className="text-3xl font-bold">My Websites</h1>
               <p className="text-muted-foreground">Manage and update your AI-generated websites.</p>
             </div>
-            <Button asChild>
-              <Link to="/onboarding">
-                <Plus className="w-4 h-4" /> New Website
-              </Link>
-            </Button>
-          </div>
-
-          {/* Profile section */}
-          <div className="bg-card rounded-xl shadow-card p-5 mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <User className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-muted-foreground">Profile</span>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/settings">
+                  <Settings className="w-4 h-4" /> Settings
+                </Link>
+              </Button>
+              <Button asChild>
+                <Link to="/onboarding">
+                  <Plus className="w-4 h-4" /> New Website
+                </Link>
+              </Button>
             </div>
-            <ProfileEditor />
           </div>
 
           {/* Subscription status */}
@@ -177,6 +185,33 @@ const Dashboard = () => {
             </div>
           </div>
 
+          {/* Search & Filter */}
+          {websites.length > 0 && (
+            <div className="flex items-center gap-3 mb-6">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search websites..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="live">Live</SelectItem>
+                  <SelectItem value="generating">Generating</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {loading ? (
             <div className="text-center py-12 text-muted-foreground animate-pulse">
               Loading your websites...
@@ -192,24 +227,26 @@ const Dashboard = () => {
                 <Link to="/onboarding">Get Started</Link>
               </Button>
             </div>
+          ) : filteredWebsites.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              No websites match your search.
+            </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {websites.map((site) => (
+              {filteredWebsites.map((site) => (
                 <div
                   key={site.id}
                   className="bg-card rounded-xl shadow-card hover:shadow-card-hover transition-shadow overflow-hidden"
                 >
-                  <div className="h-40 bg-gradient-hero flex items-center justify-center">
+                  <div className="h-40 bg-gradient-hero flex items-center justify-center relative">
                     <Globe className="w-10 h-10 text-primary-foreground/50" />
+                    <span className={`absolute top-3 right-3 text-xs px-2 py-1 rounded-full font-medium ${statusStyles(site.status)}`}>
+                      {site.status}
+                    </span>
                   </div>
 
                   <div className="p-5">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold text-lg">{site.name}</h3>
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium ${statusStyles(site.status)}`}>
-                        {site.status}
-                      </span>
-                    </div>
+                    <h3 className="font-semibold text-lg mb-1">{site.name}</h3>
 
                     <a
                       href={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-website?subdomain=${site.subdomain}`}
@@ -219,7 +256,10 @@ const Dashboard = () => {
                     >
                       {site.subdomain}.ugbiz.com <ExternalLink className="w-3 h-3" />
                     </a>
-                    <p className="text-xs text-muted-foreground mb-4">{site.industry}</p>
+                    <p className="text-xs text-muted-foreground mb-1">{site.industry}</p>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Created {format(new Date(site.created_at), "MMM d, yyyy")}
+                    </p>
 
                     <div className="flex gap-2 flex-wrap">
                       {site.status === "live" && (

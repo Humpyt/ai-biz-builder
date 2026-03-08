@@ -17,6 +17,7 @@ import Generating from "./pages/Generating";
 import Preview from "./pages/Preview";
 import Editor from "./pages/Editor";
 import Payment from "./pages/Payment";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";

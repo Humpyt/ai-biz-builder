@@ -3,8 +3,9 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, Sparkles, RefreshCw, Eye, EyeOff, Bot, Globe } from "lucide-react";
+import { ArrowLeft, Save, Sparkles, RefreshCw, Eye, EyeOff, Bot, Globe, Code } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
@@ -54,6 +55,7 @@ const Editor = () => {
   const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
+  const [editorTab, setEditorTab] = useState("form");
 
   // Form fields
   const [name, setName] = useState("");
@@ -66,6 +68,11 @@ const Editor = () => {
   const [location, setLocation] = useState("");
   const [selectedModel, setSelectedModel] = useState("google/gemini-3-flash-preview");
   const [customDomain, setCustomDomain] = useState("");
+
+  // Code editor fields
+  const [codeHtml, setCodeHtml] = useState("");
+  const [codeCss, setCodeCss] = useState("");
+  const [codeJs, setCodeJs] = useState("");
 
   useEffect(() => {
     if (!websiteId) {
@@ -88,16 +95,20 @@ const Editor = () => {
       return;
     }
 
-    setWebsite(data as WebsiteData);
-    setName(data.name);
-    setDescription(data.description || "");
-    setServices(data.services || "");
-    setTargetAudience(data.target_audience || "");
-    setColorScheme(data.color_scheme || "");
-    setContactEmail(data.contact_email || "");
-    setPhone(data.phone || "");
-    setLocation(data.location || "");
-    setCustomDomain((data as WebsiteData).custom_domain || "");
+    const w = data as WebsiteData;
+    setWebsite(w);
+    setName(w.name);
+    setDescription(w.description || "");
+    setServices(w.services || "");
+    setTargetAudience(w.target_audience || "");
+    setColorScheme(w.color_scheme || "");
+    setContactEmail(w.contact_email || "");
+    setPhone(w.phone || "");
+    setLocation(w.location || "");
+    setCustomDomain(w.custom_domain || "");
+    setCodeHtml(w.generated_html || "");
+    setCodeCss(w.generated_css || "");
+    setCodeJs(w.generated_js || "");
     setLoading(false);
   };
 
@@ -105,25 +116,39 @@ const Editor = () => {
     if (!websiteId) return;
     setSaving(true);
 
+    const updateData: Record<string, unknown> = {
+      name,
+      description,
+      services,
+      target_audience: targetAudience,
+      color_scheme: colorScheme,
+      contact_email: contactEmail,
+      phone,
+      location,
+      custom_domain: customDomain || null,
+    };
+
+    // If on code tab, also save code changes
+    if (editorTab === "code") {
+      updateData.generated_html = codeHtml;
+      updateData.generated_css = codeCss;
+      updateData.generated_js = codeJs;
+    }
+
     const { error } = await supabase
       .from("websites")
-      .update({
-        name,
-        description,
-        services,
-        target_audience: targetAudience,
-        color_scheme: colorScheme,
-        contact_email: contactEmail,
-        phone,
-        location,
-        custom_domain: customDomain || null,
-      } as any)
+      .update(updateData as any)
       .eq("id", websiteId);
 
     if (error) {
       toast.error("Failed to save changes");
     } else {
       toast.success("Changes saved!");
+      if (editorTab === "code") {
+        setWebsite((prev) =>
+          prev ? { ...prev, generated_html: codeHtml, generated_css: codeCss, generated_js: codeJs } : prev
+        );
+      }
     }
     setSaving(false);
   };
@@ -131,8 +156,6 @@ const Editor = () => {
   const handleRegenerate = async () => {
     if (!websiteId) return;
     setRegenerating(true);
-
-    // Save first
     await handleSave();
 
     const { error } = await supabase.functions.invoke("generate-website", {
@@ -147,7 +170,6 @@ const Editor = () => {
 
     toast.info("Regenerating website with your changes...");
 
-    // Poll for completion
     const poll = setInterval(async () => {
       const { data } = await supabase
         .from("websites")
@@ -160,15 +182,12 @@ const Editor = () => {
         setRegenerating(false);
         setWebsite((prev) =>
           prev
-            ? {
-                ...prev,
-                generated_html: data.generated_html,
-                generated_css: data.generated_css,
-                generated_js: data.generated_js,
-                status: "live",
-              }
+            ? { ...prev, generated_html: data.generated_html, generated_css: data.generated_css, generated_js: data.generated_js, status: "live" }
             : prev
         );
+        setCodeHtml(data.generated_html || "");
+        setCodeCss(data.generated_css || "");
+        setCodeJs(data.generated_js || "");
         toast.success("Website regenerated!");
       } else if (data?.status === "failed") {
         clearInterval(poll);
@@ -178,17 +197,17 @@ const Editor = () => {
     }, 3000);
   };
 
-  const iframeSrc = (() => {
-    if (!website) return "";
-    const html = website.generated_html || "";
-    const css = website.generated_css || "";
-    const js = website.generated_js || "";
-    if (html.trim().toLowerCase().startsWith("<!doctype") || html.trim().toLowerCase().startsWith("<html")) {
-      return html
-        .replace("</head>", `<style>${css}</style></head>`)
-        .replace("</body>", `<script>${js}<\/script></body>`);
+  const previewSrc = (() => {
+    // Use code editor values if on code tab, otherwise website values
+    const h = editorTab === "code" ? codeHtml : (website?.generated_html || "");
+    const c = editorTab === "code" ? codeCss : (website?.generated_css || "");
+    const j = editorTab === "code" ? codeJs : (website?.generated_js || "");
+    if (h.trim().toLowerCase().startsWith("<!doctype") || h.trim().toLowerCase().startsWith("<html")) {
+      return h
+        .replace("</head>", `<style>${c}</style></head>`)
+        .replace("</body>", `<script>${j}<\/script></body>`);
     }
-    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style></head><body>${html}<script>${js}<\/script></body></html>`;
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${c}</style></head><body>${h}<script>${j}<\/script></body></html>`;
   })();
 
   if (loading) {
@@ -237,129 +256,135 @@ const Editor = () => {
 
       {/* Main content */}
       <div className="flex-1 flex">
-        {/* Form panel */}
-        <div className={`${showPreview ? "w-[400px]" : "w-full max-w-2xl mx-auto"} border-r bg-card overflow-y-auto p-6 space-y-6`}>
-          <div>
-            <h2 className="text-lg font-semibold mb-1">Business Information</h2>
-            <p className="text-sm text-muted-foreground">Update details and regenerate your website.</p>
-          </div>
+        {/* Form/Code panel */}
+        <div className={`${showPreview ? "w-[420px]" : "w-full max-w-2xl mx-auto"} border-r bg-card overflow-y-auto`}>
+          <Tabs value={editorTab} onValueChange={setEditorTab} className="h-full flex flex-col">
+            <TabsList className="mx-4 mt-4 mb-2">
+              <TabsTrigger value="form" className="flex items-center gap-1.5">
+                <Pencil className="w-3.5 h-3.5" /> Form
+              </TabsTrigger>
+              <TabsTrigger value="code" className="flex items-center gap-1.5">
+                <Code className="w-3.5 h-3.5" /> Code
+              </TabsTrigger>
+            </TabsList>
 
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Business Name</label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Description</label>
-              <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={4}
-                placeholder="Describe your business..."
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Products / Services</label>
-              <Textarea
-                value={services}
-                onChange={(e) => setServices(e.target.value)}
-                rows={3}
-                placeholder="List your main products or services..."
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Target Audience</label>
-              <Input
-                value={targetAudience}
-                onChange={(e) => setTargetAudience(e.target.value)}
-                placeholder="e.g. Young professionals in Kampala"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Color Scheme</label>
-              <div className="grid grid-cols-2 gap-2">
-                {colorSchemes.map((scheme) => (
-                  <button
-                    key={scheme.name}
-                    onClick={() => setColorScheme(scheme.name)}
-                    className={`p-3 rounded-lg border-2 transition-all text-left ${
-                      colorScheme === scheme.name
-                        ? "border-primary shadow-card-hover"
-                        : "border-border hover:border-muted-foreground/30"
-                    }`}
-                  >
-                    <div className="flex gap-1 mb-1">
-                      {scheme.colors.map((c) => (
-                        <div
-                          key={c}
-                          className="w-4 h-4 rounded-full"
-                          style={{ backgroundColor: c }}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-xs font-medium">{scheme.name}</span>
-                  </button>
-                ))}
+            <TabsContent value="form" className="flex-1 overflow-y-auto p-6 space-y-6 mt-0">
+              <div>
+                <h2 className="text-lg font-semibold mb-1">Business Information</h2>
+                <p className="text-sm text-muted-foreground">Update details and regenerate your website.</p>
               </div>
-            </div>
 
-            <div>
-              <label className="text-sm font-medium mb-1.5 block flex items-center gap-1.5">
-                <Bot className="w-4 h-4" /> AI Model
-              </label>
-              <Select value={selectedModel} onValueChange={setSelectedModel}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {aiModels.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>
-                      <span className="font-medium">{m.name}</span>
-                      <span className="text-muted-foreground ml-2 text-xs">— {m.desc}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">Business Name</label>
+                  <Input value={name} onChange={(e) => setName(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">Description</label>
+                  <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} placeholder="Describe your business..." />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">Products / Services</label>
+                  <Textarea value={services} onChange={(e) => setServices(e.target.value)} rows={3} placeholder="List your main products or services..." />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">Target Audience</label>
+                  <Input value={targetAudience} onChange={(e) => setTargetAudience(e.target.value)} placeholder="e.g. Young professionals in Kampala" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">Color Scheme</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {colorSchemes.map((scheme) => (
+                      <button
+                        key={scheme.name}
+                        onClick={() => setColorScheme(scheme.name)}
+                        className={`p-3 rounded-lg border-2 transition-all text-left ${
+                          colorScheme === scheme.name ? "border-primary shadow-card-hover" : "border-border hover:border-muted-foreground/30"
+                        }`}
+                      >
+                        <div className="flex gap-1 mb-1">
+                          {scheme.colors.map((c) => (
+                            <div key={c} className="w-4 h-4 rounded-full" style={{ backgroundColor: c }} />
+                          ))}
+                        </div>
+                        <span className="text-xs font-medium">{scheme.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block flex items-center gap-1.5">
+                    <Bot className="w-4 h-4" /> AI Model
+                  </label>
+                  <Select value={selectedModel} onValueChange={setSelectedModel}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {aiModels.map((m) => (
+                        <SelectItem key={m.id} value={m.id}>
+                          <span className="font-medium">{m.name}</span>
+                          <span className="text-muted-foreground ml-2 text-xs">— {m.desc}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">Contact Email</label>
+                  <Input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">Phone</label>
+                  <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">Location</label>
+                  <Input value={location} onChange={(e) => setLocation(e.target.value)} />
+                </div>
+                <div className="pt-4 border-t">
+                  <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
+                    <Globe className="w-4 h-4" /> Custom Domain
+                  </label>
+                  <Input value={customDomain} onChange={(e) => setCustomDomain(e.target.value)} placeholder="e.g. www.mybusiness.com" />
+                  <p className="text-xs text-muted-foreground mt-1.5">Save your desired domain. Public hosting coming soon.</p>
+                </div>
+              </div>
+            </TabsContent>
 
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Contact Email</label>
-              <Input
-                type="email"
-                value={contactEmail}
-                onChange={(e) => setContactEmail(e.target.value)}
-              />
-            </div>
+            <TabsContent value="code" className="flex-1 overflow-y-auto p-4 space-y-4 mt-0">
+              <div>
+                <h2 className="text-lg font-semibold mb-1">Code Editor</h2>
+                <p className="text-sm text-muted-foreground">Edit HTML, CSS, and JS directly. Changes preview live.</p>
+              </div>
 
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Phone</label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-1.5 block">Location</label>
-              <Input value={location} onChange={(e) => setLocation(e.target.value)} />
-            </div>
-
-            {/* Custom Domain */}
-            <div className="pt-4 border-t">
-              <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
-                <Globe className="w-4 h-4" /> Custom Domain
-              </label>
-              <Input
-                value={customDomain}
-                onChange={(e) => setCustomDomain(e.target.value)}
-                placeholder="e.g. www.mybusiness.com"
-              />
-              <p className="text-xs text-muted-foreground mt-1.5">
-                Save your desired domain. Public hosting coming soon.
-              </p>
-            </div>
-          </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">HTML</label>
+                <textarea
+                  value={codeHtml}
+                  onChange={(e) => setCodeHtml(e.target.value)}
+                  className="w-full h-48 font-mono text-xs bg-muted/50 border rounded-lg p-3 resize-y focus:outline-none focus:ring-2 focus:ring-ring"
+                  spellCheck={false}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">CSS</label>
+                <textarea
+                  value={codeCss}
+                  onChange={(e) => setCodeCss(e.target.value)}
+                  className="w-full h-36 font-mono text-xs bg-muted/50 border rounded-lg p-3 resize-y focus:outline-none focus:ring-2 focus:ring-ring"
+                  spellCheck={false}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">JavaScript</label>
+                <textarea
+                  value={codeJs}
+                  onChange={(e) => setCodeJs(e.target.value)}
+                  className="w-full h-36 font-mono text-xs bg-muted/50 border rounded-lg p-3 resize-y focus:outline-none focus:ring-2 focus:ring-ring"
+                  spellCheck={false}
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
 
         {/* Preview panel */}
@@ -374,7 +399,7 @@ const Editor = () => {
               </div>
             )}
             <iframe
-              srcDoc={iframeSrc}
+              srcDoc={previewSrc}
               className="w-full h-full border-0"
               title={`Preview of ${name}`}
               sandbox="allow-scripts"
