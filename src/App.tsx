@@ -61,6 +61,9 @@ const App = () => (
             <Route path="/payment" element={
               <ProtectedRoute><Payment /></ProtectedRoute>
             } />
+            <Route path="/settings" element={
+              <ProtectedRoute><Settings /></ProtectedRoute>
+            } />
             <Route path="/admin" element={<AdminRoute><AdminOverview /></AdminRoute>} />
             <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />
             <Route path="/admin/websites" element={<AdminRoute><AdminWebsites /></AdminRoute>} />
