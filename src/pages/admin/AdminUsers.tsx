@@ -221,7 +221,7 @@ const AdminUsers = () => {
                     </TableRow>
                     {expandedUser === p.user_id && (
                       <TableRow key={`${p.id}-detail`}>
-                        <TableCell colSpan={5} className="bg-muted/30 p-4">
+                        <TableCell colSpan={6} className="bg-muted/30 p-4">
                           {detailLoading ? (
                             <div className="text-muted-foreground animate-pulse text-sm">Loading details...</div>
                           ) : (
