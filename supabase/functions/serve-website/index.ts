@@ -94,7 +94,7 @@ serve(async (req) => {
     // Fetch the website
     const { data: website, error } = await supabase
       .from("websites")
-      .select("id, name, description, industry, generated_html, generated_css, generated_js, status")
+      .select("id, name, description, industry, generated_html, generated_css, generated_js, status, chat_widget_enabled")
       .eq("subdomain", subdomain)
       .eq("status", "live")
       .single();
