@@ -46,6 +46,7 @@ interface WebsiteData {
   generated_css: string | null;
   generated_js: string | null;
   custom_domain: string | null;
+  chat_widget_enabled: boolean;
   status: string;
 }
 
