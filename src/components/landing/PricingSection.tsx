@@ -54,28 +54,35 @@ const plans = [
 ];
 
 const PricingSection = () => (
-  <section className="py-24" id="pricing" aria-label="Pricing">
+  <section className="py-28 bg-muted/30 bg-dot-grid" id="pricing" aria-label="Pricing">
     <div className="container">
-      <div className="text-center mb-16">
-        <h2 className="text-3xl md:text-4xl font-bold mb-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        className="text-center mb-16"
+      >
+        <span className="text-sm font-semibold text-secondary uppercase tracking-widest">Pricing</span>
+        <h2 className="text-3xl md:text-5xl font-bold mt-3 mb-4">
           Simple, Transparent Pricing
         </h2>
-        <p className="text-muted-foreground max-w-lg mx-auto">
+        <p className="text-muted-foreground max-w-lg mx-auto text-lg">
           Choose the plan that fits your business. Upgrade or downgrade at any time.
         </p>
-      </div>
+      </motion.div>
 
-      <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+      <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start">
         {plans.map((plan, i) => (
           <motion.div
             key={plan.name}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: i * 0.1 }}
             className={`relative rounded-2xl p-8 ${
               plan.popular
-                ? "bg-primary text-primary-foreground shadow-lg scale-105 glow-accent"
+                ? "bg-primary text-primary-foreground shadow-xl md:scale-105 animate-pulse-glow"
                 : "bg-card shadow-card"
             }`}
           >
@@ -85,11 +92,11 @@ const PricingSection = () => (
               </span>
             )}
             <h3 className="font-display text-xl font-bold mb-1">{plan.name}</h3>
-            <p className={`text-sm mb-4 ${plan.popular ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+            <p className={`text-sm mb-6 ${plan.popular ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
               {plan.description}
             </p>
-            <div className="mb-6">
-              <span className="text-3xl font-bold">{plan.price}</span>
+            <div className="mb-8">
+              <span className="text-4xl font-bold">{plan.price}</span>
               <span className={`text-sm ${plan.popular ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                 {plan.period}
               </span>
