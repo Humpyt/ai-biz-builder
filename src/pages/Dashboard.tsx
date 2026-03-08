@@ -137,6 +137,15 @@ const Dashboard = () => {
             </Button>
           </div>
 
+          {/* Profile section */}
+          <div className="bg-card rounded-xl shadow-card p-5 mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <User className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-muted-foreground">Profile</span>
+            </div>
+            <ProfileEditor />
+          </div>
+
           {/* Subscription status */}
           <div className="bg-card rounded-xl shadow-card p-5 mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-4">
