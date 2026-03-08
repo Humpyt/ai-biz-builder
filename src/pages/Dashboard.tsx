@@ -129,9 +129,14 @@ const Dashboard = () => {
                       </span>
                     </div>
 
-                    <p className="text-sm text-muted-foreground mb-1">
-                      {site.subdomain}.ugbiz.com
-                    </p>
+                    <a
+                      href={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-website?subdomain=${site.subdomain}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary hover:underline flex items-center gap-1 mb-1"
+                    >
+                      {site.subdomain}.ugbiz.com <ExternalLink className="w-3 h-3" />
+                    </a>
                     <p className="text-xs text-muted-foreground mb-4">{site.industry}</p>
 
                     <div className="flex gap-2">
