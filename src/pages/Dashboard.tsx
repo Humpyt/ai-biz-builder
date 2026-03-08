@@ -136,20 +136,27 @@ const Dashboard = () => {
 
                     <div className="flex gap-2">
                       {site.status === "live" && (
-                        <Button variant="outline" size="sm" className="flex-1" asChild>
-                          <Link to={`/preview?id=${site.id}`}>
-                            <Eye className="w-3.5 h-3.5" /> Preview
-                          </Link>
-                        </Button>
+                        <>
+                          <Button variant="outline" size="sm" className="flex-1" asChild>
+                            <Link to={`/preview?id=${site.id}`}>
+                              <Eye className="w-3.5 h-3.5" /> Preview
+                            </Link>
+                          </Button>
+                          <Button variant="outline" size="sm" className="flex-1" asChild>
+                            <Link to={`/editor?id=${site.id}`}>
+                              <Pencil className="w-3.5 h-3.5" /> Edit
+                            </Link>
+                          </Button>
+                        </>
                       )}
-                      {(site.status === "live" || site.status === "failed") && (
+                      {site.status === "failed" && (
                         <Button
                           variant="outline"
                           size="sm"
                           className="flex-1"
                           onClick={() => handleRegenerate(site.id)}
                         >
-                          <RefreshCw className="w-3.5 h-3.5" /> Regenerate
+                          <RefreshCw className="w-3.5 h-3.5" /> Retry
                         </Button>
                       )}
                       {site.status === "generating" && (
