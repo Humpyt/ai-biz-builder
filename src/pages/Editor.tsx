@@ -116,7 +116,8 @@ const Editor = () => {
         contact_email: contactEmail,
         phone,
         location,
-      })
+        custom_domain: customDomain || null,
+      } as any)
       .eq("id", websiteId);
 
     if (error) {
