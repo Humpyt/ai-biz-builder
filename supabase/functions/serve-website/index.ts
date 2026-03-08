@@ -1,6 +1,78 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+function buildChatWidget(websiteId: string, businessName: string): string {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const safeName = businessName.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+  return `
+<div id="ugbiz-chat-widget">
+<style>
+#ugbiz-chat-toggle{position:fixed;bottom:20px;right:20px;width:56px;height:56px;border-radius:50%;background:#2563eb;color:#fff;border:none;cursor:pointer;box-shadow:0 4px 14px rgba(37,99,235,.4);z-index:99999;display:flex;align-items:center;justify-content:center;transition:transform .2s}
+#ugbiz-chat-toggle:hover{transform:scale(1.1)}
+#ugbiz-chat-toggle svg{width:28px;height:28px;fill:currentColor}
+#ugbiz-chat-box{position:fixed;bottom:88px;right:20px;width:370px;max-width:calc(100vw - 32px);height:480px;max-height:calc(100vh - 120px);border-radius:16px;background:#fff;box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:99999;display:none;flex-direction:column;overflow:hidden;font-family:system-ui,-apple-system,sans-serif}
+#ugbiz-chat-box.open{display:flex}
+#ugbiz-chat-header{background:#2563eb;color:#fff;padding:14px 16px;font-weight:600;font-size:15px;display:flex;align-items:center;justify-content:space-between}
+#ugbiz-chat-header button{background:none;border:none;color:#fff;cursor:pointer;font-size:20px;line-height:1;padding:0 4px}
+#ugbiz-chat-messages{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.ugbiz-msg{max-width:85%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.5;word-wrap:break-word}
+.ugbiz-msg.assistant{background:#f1f5f9;color:#1e293b;align-self:flex-start;border-bottom-left-radius:4px}
+.ugbiz-msg.user{background:#2563eb;color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.ugbiz-msg.typing{background:#f1f5f9;align-self:flex-start;border-bottom-left-radius:4px;color:#94a3b8}
+#ugbiz-chat-input-area{border-top:1px solid #e2e8f0;padding:10px 12px;display:flex;gap:8px;align-items:center}
+#ugbiz-chat-input{flex:1;border:1px solid #e2e8f0;border-radius:24px;padding:8px 14px;font-size:14px;outline:none;font-family:inherit;resize:none;max-height:80px;line-height:1.4}
+#ugbiz-chat-input:focus{border-color:#2563eb}
+#ugbiz-chat-send{width:36px;height:36px;border-radius:50%;background:#2563eb;color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+#ugbiz-chat-send:disabled{opacity:.5;cursor:not-allowed}
+#ugbiz-chat-send svg{width:18px;height:18px;fill:currentColor}
+</style>
+<button id="ugbiz-chat-toggle" aria-label="Chat with us">
+<svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/><path d="M7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/></svg>
+</button>
+<div id="ugbiz-chat-box">
+<div id="ugbiz-chat-header">
+<span>Chat with ${safeName}</span>
+<button onclick="document.getElementById('ugbiz-chat-box').classList.remove('open')" aria-label="Close">&#10005;</button>
+</div>
+<div id="ugbiz-chat-messages">
+<div class="ugbiz-msg assistant">Hi! I'm the AI assistant for ${safeName}. How can I help you today?</div>
+</div>
+<div id="ugbiz-chat-input-area">
+<input id="ugbiz-chat-input" type="text" placeholder="Type a message..." autocomplete="off">
+<button id="ugbiz-chat-send" aria-label="Send">
+<svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+</button>
+</div>
+</div>
+<script>
+(function(){
+  var toggle=document.getElementById("ugbiz-chat-toggle");
+  var box=document.getElementById("ugbiz-chat-box");
+  var input=document.getElementById("ugbiz-chat-input");
+  var sendBtn=document.getElementById("ugbiz-chat-send");
+  var msgs=document.getElementById("ugbiz-chat-messages");
+  var history=[];
+  var sending=false;
+  toggle.onclick=function(){box.classList.toggle("open");if(box.classList.contains("open"))input.focus()};
+  function addMsg(role,text){var d=document.createElement("div");d.className="ugbiz-msg "+role;d.textContent=text;msgs.appendChild(d);msgs.scrollTop=msgs.scrollHeight;return d}
+  function doSend(){
+    var text=input.value.trim();if(!text||sending)return;
+    sending=true;sendBtn.disabled=true;input.value="";
+    addMsg("user",text);history.push({role:"user",content:text});
+    var typing=addMsg("typing","Thinking...");
+    fetch("${supabaseUrl}/functions/v1/chat-widget",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({websiteId:"${websiteId}",messages:history})})
+    .then(function(r){return r.json()})
+    .then(function(d){msgs.removeChild(typing);var reply=d.reply||d.error||"Sorry, something went wrong.";addMsg("assistant",reply);history.push({role:"assistant",content:reply})})
+    .catch(function(){msgs.removeChild(typing);addMsg("assistant","Sorry, I could not connect. Please try again.")})
+    .finally(function(){sending=false;sendBtn.disabled=false;input.focus()});
+  }
+  sendBtn.onclick=doSend;
+  input.onkeydown=function(e){if(e.key==="Enter"){e.preventDefault();doSend()}};
+})();
+</script>
+</div>`;
+}
+
 serve(async (req) => {
   const url = new URL(req.url);
   const subdomain = url.searchParams.get("subdomain");
@@ -83,12 +155,15 @@ serve(async (req) => {
   <meta name="twitter:title" content="${seoTitle.replace(/"/g, '&quot;')}">
   <meta name="twitter:description" content="${seoDesc}">`;
 
+    // Chat widget code
+    const chatWidgetCode = buildChatWidget(website.id, website.name);
+
     let fullHtml: string;
 
     if (html.trim().toLowerCase().startsWith("<!doctype") || html.trim().toLowerCase().startsWith("<html")) {
       fullHtml = html
         .replace("</head>", `${seoMeta}\n<style>${css}</style></head>`)
-        .replace("</body>", `<script>${js}</script></body>`);
+        .replace("</body>", `<script>${js}</script>${chatWidgetCode}</body>`);
     } else {
       fullHtml = `<!DOCTYPE html>
 <html lang="en">
@@ -101,6 +176,7 @@ serve(async (req) => {
 <body>
 ${html}
 <script>${js}</script>
+${chatWidgetCode}
 </body>
 </html>`;
     }
