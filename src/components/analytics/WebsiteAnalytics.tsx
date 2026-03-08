@@ -40,7 +40,7 @@ export default function WebsiteAnalytics({ websites }: { websites: Website[] }) 
 
       let query = supabase
         .from("page_views")
-        .select("id, website_id, page_slug, viewed_at, referer")
+        .select("id, website_id, page_slug, viewed_at, referer, country")
         .gte("viewed_at", since)
         .order("viewed_at", { ascending: false });
 
