@@ -441,17 +441,37 @@ const Editor = () => {
         <div className="bg-card border-b px-4 py-2 flex items-center gap-1 overflow-x-auto">
           <FileText className="w-4 h-4 text-muted-foreground mr-2 flex-shrink-0" />
           {pages.map((page) => (
-            <button
-              key={page.slug}
-              onClick={() => setActivePage(page.slug)}
-              className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors whitespace-nowrap ${
-                activePage === page.slug
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              {page.title}
-            </button>
+            <div key={page.slug} className="flex items-center gap-0.5">
+              <button
+                onClick={() => setActivePage(page.slug)}
+                className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors whitespace-nowrap ${
+                  activePage === page.slug
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {page.title}
+              </button>
+              {activePage === page.slug && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 flex-shrink-0"
+                  disabled={regeneratingPage === page.slug || regenerating}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRegeneratePage(page.slug);
+                  }}
+                  title={`Regenerate ${page.title}`}
+                >
+                  {regeneratingPage === page.slug ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  )}
+                </Button>
+              )}
+            </div>
           ))}
         </div>
       )}
