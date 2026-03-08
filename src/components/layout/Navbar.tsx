@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { Globe, LogOut } from "lucide-react";
+import { Globe, LogOut, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Navbar = () => {
