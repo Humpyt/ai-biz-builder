@@ -120,6 +120,24 @@ const AdminUsers = () => {
     }
   };
 
+  const handleToggleBan = async () => {
+    if (!banConfirm) return;
+    const newBanned = !banConfirm.currentlyBanned;
+    const { error } = await supabase
+      .from("profiles")
+      .update({ banned: newBanned })
+      .eq("user_id", banConfirm.userId);
+    if (error) {
+      toast.error("Failed to update user status");
+    } else {
+      toast.success(newBanned ? "User has been banned" : "User has been unbanned");
+      setProfiles((prev) =>
+        prev.map((p) => (p.user_id === banConfirm.userId ? { ...p, banned: newBanned } : p))
+      );
+    }
+    setBanConfirm(null);
+  };
+
   const filtered = profiles.filter(
     (p) =>
       (p.display_name || "").toLowerCase().includes(search.toLowerCase()) ||
