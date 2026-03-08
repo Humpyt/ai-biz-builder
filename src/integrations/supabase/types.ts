@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      page_views: {
+        Row: {
+          country: string | null
+          id: string
+          page_slug: string
+          referer: string | null
+          user_agent: string | null
+          viewed_at: string
+          visitor_ip: string | null
+          website_id: string
+        }
+        Insert: {
+          country?: string | null
+          id?: string
+          page_slug?: string
+          referer?: string | null
+          user_agent?: string | null
+          viewed_at?: string
+          visitor_ip?: string | null
+          website_id: string
+        }
+        Update: {
+          country?: string | null
+          id?: string
+          page_slug?: string
+          referer?: string | null
+          user_agent?: string | null
+          viewed_at?: string
+          visitor_ip?: string | null
+          website_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "page_views_website_id_fkey"
+            columns: ["website_id"]
+            isOneToOne: false
+            referencedRelation: "websites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
