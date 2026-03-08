@@ -97,6 +97,7 @@ const Editor = () => {
     setContactEmail(data.contact_email || "");
     setPhone(data.phone || "");
     setLocation(data.location || "");
+    setCustomDomain((data as WebsiteData).custom_domain || "");
     setLoading(false);
   };
 
