@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Globe, Plus, Eye, Pencil, RefreshCw, ExternalLink, Trash2 } from "lucide-react";
+import { Globe, Plus, Eye, Pencil, RefreshCw, ExternalLink, Trash2, CreditCard, CalendarClock } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,9 +28,16 @@ interface Website {
   created_at: string;
 }
 
+interface Subscription {
+  plan: string;
+  status: string;
+  expires_at: string | null;
+}
+
 const Dashboard = () => {
   const { user } = useAuth();
   const [websites, setWebsites] = useState<Website[]>([]);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchWebsites = async () => {
@@ -48,8 +56,20 @@ const Dashboard = () => {
     setLoading(false);
   };
 
+  const fetchSubscription = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("subscriptions")
+      .select("plan, status, expires_at")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setSubscription(data);
+  };
+
   useEffect(() => {
     fetchWebsites();
+    fetchSubscription();
   }, [user]);
 
   const handleRegenerate = async (websiteId: string) => {
