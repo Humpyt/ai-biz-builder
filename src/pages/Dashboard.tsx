@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Globe, Plus, Eye, Pencil, RefreshCw, ExternalLink, Trash2, CreditCard, CalendarClock } from "lucide-react";
+import { Globe, Plus, Eye, Pencil, RefreshCw, ExternalLink, Trash2, CreditCard, CalendarClock, User } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
+import ProfileEditor from "@/components/ProfileEditor";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
