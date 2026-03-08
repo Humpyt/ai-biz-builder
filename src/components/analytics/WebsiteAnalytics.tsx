@@ -165,6 +165,7 @@ export default function WebsiteAnalytics({ websites }: { websites: Website[] }) 
           No page views yet. Share your website to start tracking visitors!
         </div>
       ) : (
+        <>
         <div className="grid md:grid-cols-3 gap-6">
           {/* Bar chart - views over time */}
           <div className="md:col-span-2">
