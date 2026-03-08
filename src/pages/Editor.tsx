@@ -105,6 +105,7 @@ const Editor = () => {
   const [location, setLocation] = useState("");
   const [selectedModel, setSelectedModel] = useState("google/gemini-3-flash-preview");
   const [customDomain, setCustomDomain] = useState("");
+  const [chatWidgetEnabled, setChatWidgetEnabled] = useState(true);
 
   // Code editor fields
   const [codeHtml, setCodeHtml] = useState("");
