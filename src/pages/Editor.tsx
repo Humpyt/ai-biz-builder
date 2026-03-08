@@ -178,9 +178,18 @@ const Editor = () => {
     }, 3000);
   };
 
-  const iframeSrc = website
-    ? `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${website.generated_css || ""}</style></head><body>${website.generated_html || ""}<script>${website.generated_js || ""}<\/script></body></html>`
-    : "";
+  const iframeSrc = (() => {
+    if (!website) return "";
+    const html = website.generated_html || "";
+    const css = website.generated_css || "";
+    const js = website.generated_js || "";
+    if (html.trim().toLowerCase().startsWith("<!doctype") || html.trim().toLowerCase().startsWith("<html")) {
+      return html
+        .replace("</head>", `<style>${css}</style></head>`)
+        .replace("</body>", `<script>${js}<\/script></body>`);
+    }
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${css}</style></head><body>${html}<script>${js}<\/script></body></html>`;
+  })();
 
   if (loading) {
     return (
