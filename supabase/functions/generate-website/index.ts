@@ -29,8 +29,17 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) throw new Error("Unauthorized");
 
-    const { websiteId } = await req.json();
+    const { websiteId, model } = await req.json();
     if (!websiteId) throw new Error("Missing websiteId");
+
+    const allowedModels = [
+      "google/gemini-3-flash-preview",
+      "google/gemini-2.5-flash",
+      "google/gemini-2.5-pro",
+      "openai/gpt-5-mini",
+      "openai/gpt-5",
+    ];
+    const selectedModel = allowedModels.includes(model) ? model : "google/gemini-3-flash-preview";
 
     // Fetch website record
     const { data: website, error: fetchError } = await supabase
@@ -85,7 +94,7 @@ Make the website reflect the ${website.industry} industry with appropriate image
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: selectedModel,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },

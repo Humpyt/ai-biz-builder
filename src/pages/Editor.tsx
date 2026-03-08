@@ -3,10 +3,19 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, Sparkles, RefreshCw, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Save, Sparkles, RefreshCw, Eye, EyeOff, Bot } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+
+const aiModels = [
+  { id: "google/gemini-3-flash-preview", name: "Gemini 3 Flash", desc: "Fast & balanced" },
+  { id: "google/gemini-2.5-flash", name: "Gemini 2.5 Flash", desc: "Good multimodal" },
+  { id: "google/gemini-2.5-pro", name: "Gemini 2.5 Pro", desc: "Best quality" },
+  { id: "openai/gpt-5-mini", name: "GPT-5 Mini", desc: "Strong & affordable" },
+  { id: "openai/gpt-5", name: "GPT-5", desc: "Most powerful" },
+];
 
 const colorSchemes = [
   { name: "Earth Tones", colors: ["#8B6F47", "#2D5016", "#D4A574"] },
@@ -54,6 +63,7 @@ const Editor = () => {
   const [contactEmail, setContactEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [location, setLocation] = useState("");
+  const [selectedModel, setSelectedModel] = useState("google/gemini-3-flash-preview");
 
   useEffect(() => {
     if (!websiteId) {
@@ -122,7 +132,7 @@ const Editor = () => {
     await handleSave();
 
     const { error } = await supabase.functions.invoke("generate-website", {
-      body: { websiteId },
+      body: { websiteId, model: selectedModel },
     });
 
     if (error) {
@@ -282,6 +292,25 @@ const Editor = () => {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-1.5 block flex items-center gap-1.5">
+                <Bot className="w-4 h-4" /> AI Model
+              </label>
+              <Select value={selectedModel} onValueChange={setSelectedModel}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {aiModels.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      <span className="font-medium">{m.name}</span>
+                      <span className="text-muted-foreground ml-2 text-xs">— {m.desc}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
