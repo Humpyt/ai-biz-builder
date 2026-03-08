@@ -105,6 +105,22 @@ ${html}
 </html>`;
     }
 
+    // Track page view (fire-and-forget, don't block response)
+    const visitorIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || 
+                      req.headers.get("x-real-ip") || "unknown";
+    const userAgent = req.headers.get("user-agent") || "";
+    const referer = req.headers.get("referer") || "";
+
+    supabase.from("page_views").insert({
+      website_id: website.id,
+      page_slug: slug,
+      visitor_ip: visitorIp,
+      user_agent: userAgent,
+      referer: referer,
+    }).then(({ error: pvError }) => {
+      if (pvError) console.error("Page view tracking error:", pvError);
+    });
+
     return new Response(fullHtml, {
       status: 200,
       headers: {
