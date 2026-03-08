@@ -29,6 +29,12 @@ const Navbar = () => {
               Dashboard
             </Link>
           )}
+          {isAdmin && (
+            <Link to="/admin" className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+              <Shield className="w-3.5 h-3.5" />
+              Admin
+            </Link>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
