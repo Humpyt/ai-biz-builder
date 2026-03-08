@@ -67,6 +67,40 @@ const Onboarding = () => {
     setGenerating(true);
 
     try {
+      // ── Client-side subscription check ──
+      const planLimits: Record<string, number> = {
+        free: 1, starter: 1, business: 5, enterprise: Infinity,
+      };
+
+      const { data: sub } = await supabase
+        .from("subscriptions")
+        .select("plan, status, expires_at")
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const currentPlan = sub?.plan || "free";
+      const limit = planLimits[currentPlan] ?? 1;
+
+      if (sub?.expires_at && new Date(sub.expires_at) < new Date()) {
+        toast.error("Your subscription has expired. Please renew to create websites.");
+        setGenerating(false);
+        return;
+      }
+
+      const { count } = await supabase
+        .from("websites")
+        .select("id", { count: "exact", head: true })
+        .in("status", ["live", "generating"]);
+
+      if ((count ?? 0) >= limit) {
+        toast.error(`Your ${currentPlan} plan allows ${limit} website${limit > 1 ? "s" : ""}. Upgrade to create more.`);
+        navigate("/pricing");
+        setGenerating(false);
+        return;
+      }
+
       // Create website record
       const subdomain = formData.subdomain || formData.businessName.toLowerCase().replace(/[^a-z0-9]/g, "-");
       const { data: website, error: insertError } = await supabase
@@ -89,7 +123,7 @@ const Onboarding = () => {
         .single();
 
       if (insertError) {
-        if (insertError.message.includes("unique")) {
+        if (insertError.message.includes("unique") || insertError.message.includes("duplicate")) {
           toast.error("That subdomain is already taken. Please choose another.");
         } else {
           toast.error("Failed to create website. Please try again.");
