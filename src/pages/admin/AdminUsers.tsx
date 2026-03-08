@@ -167,6 +167,7 @@ const AdminUsers = () => {
                 <TableHead>User ID</TableHead>
                 <TableHead>Joined</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="w-24">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
