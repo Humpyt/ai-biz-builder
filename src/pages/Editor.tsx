@@ -132,7 +132,7 @@ const Editor = () => {
     await handleSave();
 
     const { error } = await supabase.functions.invoke("generate-website", {
-      body: { websiteId },
+      body: { websiteId, model: selectedModel },
     });
 
     if (error) {
