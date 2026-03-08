@@ -222,6 +222,168 @@ serve(async (req) => {
       );
     }
 
+    // ── SINGLE PAGE REGENERATION ──
+    if (pageSlug) {
+      // Fetch the existing page
+      const { data: existingPage } = await supabase
+        .from("website_pages")
+        .select("*")
+        .eq("website_id", websiteId)
+        .eq("slug", pageSlug)
+        .single();
+
+      if (!existingPage) throw new Error(`Page '${pageSlug}' not found`);
+
+      await supabase.from("websites").update({ status: "generating" }).eq("id", websiteId);
+
+      const pageTypeDescriptions: Record<string, string> = {
+        index: "Home page with: hero section, brief about, featured services, call-to-action",
+        about: "About page with: company story, mission, team section",
+        services: "Services page with: detailed service/product listings with descriptions",
+        contact: "Contact page with: contact form (name, email, message), map placeholder, business info",
+      };
+
+      const singlePageSystemPrompt = `You are an expert web developer. Regenerate a SINGLE page for an existing multi-page website.
+
+Generate ONLY the "${pageSlug}" page (slug: "${pageSlug}").
+Page purpose: ${pageTypeDescriptions[pageSlug] || "A page appropriate for its slug/title"}.
+
+Requirements:
+- Semantic, accessible HTML5 with a consistent navigation bar linking all pages
+- Navigation links should use anchors like: index.html, about.html, services.html, contact.html
+- Mobile-first responsive CSS using the specified color scheme
+- Complete HTML document with <!DOCTYPE html>
+- SEO: Open Graph tags, semantic HTML, alt text on images, proper <title>
+
+Image placeholders: Use __IMG_<id>__ as src. Provide 1-2 image prompts for this page.
+Do NOT use external libraries or CDNs.`;
+
+      const singlePageUserPrompt = `Regenerate the "${existingPage.title}" page for:
+Business Name: ${website.name}
+Industry: ${website.industry}
+Description: ${website.description || "A professional business"}
+Products/Services: ${website.services || "Various professional services"}
+Target Audience: ${website.target_audience || "General public"}
+Color Scheme: ${website.color_scheme || "Modern blue and white"}
+Contact Email: ${website.contact_email || ""}
+Phone: ${website.phone || ""}
+Location: ${website.location || ""}
+
+Make it fresh, modern, and reflect the ${website.industry} industry.`;
+
+      const singlePageToolSchema = {
+        type: "function",
+        function: {
+          name: "create_page",
+          description: "Create a single page with HTML, CSS, JS, and image prompts.",
+          parameters: {
+            type: "object",
+            properties: {
+              html: { type: "string", description: "Complete HTML for this page" },
+              css: { type: "string", description: "CSS for this page (including shared styles)" },
+              js: { type: "string", description: "JavaScript for this page" },
+              image_prompts: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string" },
+                    prompt: { type: "string" },
+                  },
+                  required: ["id", "prompt"],
+                  additionalProperties: false,
+                },
+              },
+            },
+            required: ["html", "css", "js", "image_prompts"],
+            additionalProperties: false,
+          },
+        },
+      };
+
+      let pageParsed: any;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const aiData = await callAI(
+            LOVABLE_API_KEY,
+            selectedModel,
+            [
+              { role: "system", content: singlePageSystemPrompt },
+              { role: "user", content: singlePageUserPrompt },
+            ],
+            [singlePageToolSchema],
+            { type: "function", function: { name: "create_page" } }
+          );
+
+          const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+          if (toolCall?.function?.arguments) {
+            pageParsed = JSON.parse(toolCall.function.arguments);
+            break;
+          }
+          const content = aiData.choices?.[0]?.message?.content;
+          if (content) {
+            let clean = content.trim();
+            if (clean.startsWith("```")) clean = clean.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+            pageParsed = JSON.parse(clean);
+            break;
+          }
+          throw new Error("No parseable response from AI");
+        } catch (e: any) {
+          if (e.status === 429 || e.status === 402) {
+            await supabase.from("websites").update({ status: "live" }).eq("id", websiteId);
+            return new Response(
+              JSON.stringify({ error: e.status === 429 ? "Rate limited. Please try again later." : "AI credits exhausted." }),
+              { status: e.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          if (attempt === 1) {
+            await supabase.from("websites").update({ status: "live" }).eq("id", websiteId);
+            throw new Error("Failed to regenerate page after retry");
+          }
+        }
+      }
+
+      // Generate images for this page
+      const pageImagePrompts = pageParsed.image_prompts || [];
+      const pageImageMap: Record<string, string> = {};
+      await Promise.allSettled(
+        pageImagePrompts.slice(0, 2).map(async (img: { id: string; prompt: string }) => {
+          const base64 = await generateImage(LOVABLE_API_KEY, img.prompt);
+          if (base64) {
+            const publicUrl = await uploadBase64Image(supabase, base64, websiteId, img.id);
+            if (publicUrl) pageImageMap[`__IMG_${img.id}__`] = publicUrl;
+          }
+        })
+      );
+
+      let finalHtml = pageParsed.html || "";
+      for (const [ph, url] of Object.entries(pageImageMap)) finalHtml = finalHtml.replaceAll(ph, url);
+
+      const finalCss = pageParsed.css || "";
+      const finalJs = pageParsed.js || "";
+
+      // Update the page
+      await supabase
+        .from("website_pages")
+        .update({ generated_html: finalHtml, generated_css: finalCss, generated_js: finalJs })
+        .eq("id", existingPage.id);
+
+      // If index page, also update main website record
+      if (pageSlug === "index") {
+        await supabase.from("websites").update({
+          generated_html: finalHtml, generated_css: finalCss, generated_js: finalJs, status: "live",
+        }).eq("id", websiteId);
+      } else {
+        await supabase.from("websites").update({ status: "live" }).eq("id", websiteId);
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, pageSlug, images: Object.keys(pageImageMap).length }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── FULL SITE REGENERATION (existing logic) ──
     // Update status to generating
     await supabase.from("websites").update({ status: "generating" }).eq("id", websiteId);
 

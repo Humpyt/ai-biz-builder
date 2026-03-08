@@ -76,6 +76,7 @@ const Editor = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [regeneratingPage, setRegeneratingPage] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(true);
   const [editorTab, setEditorTab] = useState("form");
 
