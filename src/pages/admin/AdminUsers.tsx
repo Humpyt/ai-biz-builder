@@ -5,9 +5,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronDown, ChevronRight, Globe, CreditCard, Shield } from "lucide-react";
+import { ChevronDown, ChevronRight, Globe, CreditCard, Shield, Ban } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { toast } from "sonner";
 
@@ -17,6 +28,7 @@ interface Profile {
   display_name: string | null;
   avatar_url: string | null;
   created_at: string;
+  banned: boolean;
 }
 
 interface UserWebsite {
@@ -49,6 +61,7 @@ const AdminUsers = () => {
   const [userSubs, setUserSubs] = useState<UserSub[]>([]);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [banConfirm, setBanConfirm] = useState<{ userId: string; name: string; currentlyBanned: boolean } | null>(null);
 
   useEffect(() => {
     const fetchProfiles = async () => {
@@ -107,6 +120,24 @@ const AdminUsers = () => {
     }
   };
 
+  const handleToggleBan = async () => {
+    if (!banConfirm) return;
+    const newBanned = !banConfirm.currentlyBanned;
+    const { error } = await supabase
+      .from("profiles")
+      .update({ banned: newBanned })
+      .eq("user_id", banConfirm.userId);
+    if (error) {
+      toast.error("Failed to update user status");
+    } else {
+      toast.success(newBanned ? "User has been banned" : "User has been unbanned");
+      setProfiles((prev) =>
+        prev.map((p) => (p.user_id === banConfirm.userId ? { ...p, banned: newBanned } : p))
+      );
+    }
+    setBanConfirm(null);
+  };
+
   const filtered = profiles.filter(
     (p) =>
       (p.display_name || "").toLowerCase().includes(search.toLowerCase()) ||
@@ -136,12 +167,13 @@ const AdminUsers = () => {
                 <TableHead>User ID</TableHead>
                 <TableHead>Joined</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead className="w-24">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
                     No users found.
                   </TableCell>
                 </TableRow>
@@ -166,12 +198,30 @@ const AdminUsers = () => {
                       </TableCell>
                       <TableCell>{format(new Date(p.created_at), "MMM d, yyyy")}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary">Active</Badge>
+                        {p.banned ? (
+                          <Badge variant="destructive">Banned</Badge>
+                        ) : (
+                          <Badge variant="secondary">Active</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant={p.banned ? "outline" : "destructive"}
+                          size="sm"
+                          className="text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setBanConfirm({ userId: p.user_id, name: p.display_name || "this user", currentlyBanned: p.banned });
+                          }}
+                        >
+                          <Ban className="h-3 w-3 mr-1" />
+                          {p.banned ? "Unban" : "Ban"}
+                        </Button>
                       </TableCell>
                     </TableRow>
                     {expandedUser === p.user_id && (
                       <TableRow key={`${p.id}-detail`}>
-                        <TableCell colSpan={5} className="bg-muted/30 p-4">
+                        <TableCell colSpan={6} className="bg-muted/30 p-4">
                           {detailLoading ? (
                             <div className="text-muted-foreground animate-pulse text-sm">Loading details...</div>
                           ) : (
@@ -277,6 +327,27 @@ const AdminUsers = () => {
           </Table>
         </div>
       )}
+
+      <AlertDialog open={!!banConfirm} onOpenChange={(open) => !open && setBanConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {banConfirm?.currentlyBanned ? "Unban User" : "Ban User"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {banConfirm?.currentlyBanned
+                ? `Are you sure you want to unban ${banConfirm.name}? They will regain access to their account.`
+                : `Are you sure you want to ban ${banConfirm?.name}? They will be unable to access the platform.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleToggleBan}>
+              {banConfirm?.currentlyBanned ? "Unban" : "Ban"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 };
