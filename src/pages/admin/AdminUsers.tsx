@@ -61,6 +61,7 @@ const AdminUsers = () => {
   const [userSubs, setUserSubs] = useState<UserSub[]>([]);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [banConfirm, setBanConfirm] = useState<{ userId: string; name: string; currentlyBanned: boolean } | null>(null);
 
   useEffect(() => {
     const fetchProfiles = async () => {
