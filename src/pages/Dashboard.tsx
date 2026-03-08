@@ -160,7 +160,7 @@ const Dashboard = () => {
                     </a>
                     <p className="text-xs text-muted-foreground mb-4">{site.industry}</p>
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       {site.status === "live" && (
                         <>
                           <Button variant="outline" size="sm" className="flex-1" asChild>
