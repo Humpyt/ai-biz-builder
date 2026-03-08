@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import WebsiteAnalytics from "@/components/analytics/WebsiteAnalytics";
 import {
   AlertDialog,
   AlertDialogAction,
