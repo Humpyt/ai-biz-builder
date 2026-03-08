@@ -94,7 +94,7 @@ serve(async (req) => {
     // Fetch the website
     const { data: website, error } = await supabase
       .from("websites")
-      .select("id, name, description, industry, generated_html, generated_css, generated_js, status")
+      .select("id, name, description, industry, generated_html, generated_css, generated_js, status, chat_widget_enabled")
       .eq("subdomain", subdomain)
       .eq("status", "live")
       .single();
@@ -155,8 +155,8 @@ serve(async (req) => {
   <meta name="twitter:title" content="${seoTitle.replace(/"/g, '&quot;')}">
   <meta name="twitter:description" content="${seoDesc}">`;
 
-    // Chat widget code
-    const chatWidgetCode = buildChatWidget(website.id, website.name);
+    // Chat widget code (only if enabled)
+    const chatWidgetCode = website.chat_widget_enabled !== false ? buildChatWidget(website.id, website.name) : "";
 
     let fullHtml: string;
 

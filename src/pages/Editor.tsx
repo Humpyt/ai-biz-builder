@@ -3,8 +3,9 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, Sparkles, RefreshCw, Eye, EyeOff, Bot, Globe, Code, Pencil, History, FileText, MessageSquare } from "lucide-react";
+import { ArrowLeft, Save, Sparkles, RefreshCw, Eye, EyeOff, Bot, Globe, Code, Pencil, History, FileText, MessageSquare, MessageCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -45,6 +46,7 @@ interface WebsiteData {
   generated_css: string | null;
   generated_js: string | null;
   custom_domain: string | null;
+  chat_widget_enabled: boolean;
   status: string;
 }
 
@@ -103,6 +105,7 @@ const Editor = () => {
   const [location, setLocation] = useState("");
   const [selectedModel, setSelectedModel] = useState("google/gemini-3-flash-preview");
   const [customDomain, setCustomDomain] = useState("");
+  const [chatWidgetEnabled, setChatWidgetEnabled] = useState(true);
 
   // Code editor fields
   const [codeHtml, setCodeHtml] = useState("");
@@ -143,6 +146,7 @@ const Editor = () => {
     setPhone(w.phone || "");
     setLocation(w.location || "");
     setCustomDomain(w.custom_domain || "");
+    setChatWidgetEnabled(w.chat_widget_enabled !== false);
     setCodeHtml(w.generated_html || "");
     setCodeCss(w.generated_css || "");
     setCodeJs(w.generated_js || "");
@@ -198,6 +202,7 @@ const Editor = () => {
       color_scheme: colorScheme,
       contact_email: contactEmail,
       phone, location,
+      chat_widget_enabled: chatWidgetEnabled,
       custom_domain: customDomain || null,
     };
 
@@ -612,6 +617,19 @@ const Editor = () => {
                   </label>
                   <Input value={customDomain} onChange={(e) => setCustomDomain(e.target.value)} placeholder="e.g. www.mybusiness.com" />
                   <p className="text-xs text-muted-foreground mt-1.5">Save your desired domain. Public hosting coming soon.</p>
+                </div>
+                <div className="pt-4 border-t">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium flex items-center gap-1.5">
+                      <MessageCircle className="w-4 h-4" /> AI Chat Widget
+                    </label>
+                    <Switch checked={chatWidgetEnabled} onCheckedChange={setChatWidgetEnabled} />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    {chatWidgetEnabled
+                      ? "Visitors can chat with an AI assistant about your business."
+                      : "Chat widget is disabled for this website."}
+                  </p>
                 </div>
               </div>
             </TabsContent>

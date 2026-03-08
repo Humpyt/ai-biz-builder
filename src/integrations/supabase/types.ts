@@ -238,6 +238,7 @@ export type Database = {
       }
       websites: {
         Row: {
+          chat_widget_enabled: boolean
           color_scheme: string | null
           contact_email: string | null
           created_at: string
@@ -259,6 +260,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          chat_widget_enabled?: boolean
           color_scheme?: string | null
           contact_email?: string | null
           created_at?: string
@@ -280,6 +282,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          chat_widget_enabled?: boolean
           color_scheme?: string | null
           contact_email?: string | null
           created_at?: string
