@@ -94,7 +94,7 @@ Make the website reflect the ${website.industry} industry with appropriate image
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: selectedModel,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },

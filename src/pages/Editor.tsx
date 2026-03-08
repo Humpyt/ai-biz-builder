@@ -295,6 +295,25 @@ const Editor = () => {
             </div>
 
             <div>
+              <label className="text-sm font-medium mb-1.5 block flex items-center gap-1.5">
+                <Bot className="w-4 h-4" /> AI Model
+              </label>
+              <Select value={selectedModel} onValueChange={setSelectedModel}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {aiModels.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      <span className="font-medium">{m.name}</span>
+                      <span className="text-muted-foreground ml-2 text-xs">— {m.desc}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
               <label className="text-sm font-medium mb-1.5 block">Contact Email</label>
               <Input
                 type="email"
