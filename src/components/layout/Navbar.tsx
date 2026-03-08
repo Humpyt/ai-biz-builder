@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Navbar = () => {
   const { user, profile, signOut } = useAuth();
+  const { isAdmin } = useAdminCheck();
 
   return (
     <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b">
