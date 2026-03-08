@@ -335,6 +335,21 @@ const Editor = () => {
               <label className="text-sm font-medium mb-1.5 block">Location</label>
               <Input value={location} onChange={(e) => setLocation(e.target.value)} />
             </div>
+
+            {/* Custom Domain */}
+            <div className="pt-4 border-t">
+              <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
+                <Globe className="w-4 h-4" /> Custom Domain
+              </label>
+              <Input
+                value={customDomain}
+                onChange={(e) => setCustomDomain(e.target.value)}
+                placeholder="e.g. www.mybusiness.com"
+              />
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Save your desired domain. Public hosting coming soon.
+              </p>
+            </div>
           </div>
         </div>
 
