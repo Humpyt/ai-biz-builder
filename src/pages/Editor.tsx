@@ -146,6 +146,7 @@ const Editor = () => {
     setPhone(w.phone || "");
     setLocation(w.location || "");
     setCustomDomain(w.custom_domain || "");
+    setChatWidgetEnabled(w.chat_widget_enabled !== false);
     setCodeHtml(w.generated_html || "");
     setCodeCss(w.generated_css || "");
     setCodeJs(w.generated_js || "");
