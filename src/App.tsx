@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import Generating from "./pages/Generating";
 import Preview from "./pages/Preview";
 import Editor from "./pages/Editor";
+import Payment from "./pages/Payment";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -42,6 +43,9 @@ const App = () => (
             } />
             <Route path="/editor" element={
               <ProtectedRoute><Editor /></ProtectedRoute>
+            } />
+            <Route path="/payment" element={
+              <ProtectedRoute><Payment /></ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />
           </Routes>
