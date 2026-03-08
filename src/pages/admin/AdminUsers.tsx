@@ -327,6 +327,27 @@ const AdminUsers = () => {
           </Table>
         </div>
       )}
+
+      <AlertDialog open={!!banConfirm} onOpenChange={(open) => !open && setBanConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {banConfirm?.currentlyBanned ? "Unban User" : "Ban User"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {banConfirm?.currentlyBanned
+                ? `Are you sure you want to unban ${banConfirm.name}? They will regain access to their account.`
+                : `Are you sure you want to ban ${banConfirm?.name}? They will be unable to access the platform.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleToggleBan}>
+              {banConfirm?.currentlyBanned ? "Unban" : "Ban"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 };
