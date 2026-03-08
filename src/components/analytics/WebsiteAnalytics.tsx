@@ -276,6 +276,7 @@ export default function WebsiteAnalytics({ websites }: { websites: Website[] }) 
             </div>
           </div>
         )}
+        </>
       )}
     </div>
   );
