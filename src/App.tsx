@@ -28,6 +28,7 @@ import AdminSubscriptions from "./pages/admin/AdminSubscriptions";
 const queryClient = new QueryClient();
 
 const App = () => (
+  <ThemeProvider attribute="class" defaultTheme="system" storageKey="ugbiz-theme">
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <TooltipProvider>
