@@ -118,4 +118,14 @@
   .glow-accent {
     box-shadow: var(--glow-accent);
   }
+
+  .bg-dot-grid {
+    background-image: radial-gradient(circle, hsl(var(--foreground) / 0.07) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .animate-shimmer {
+    background-size: 200% 100%;
+    animation: shimmer 2s ease-in-out infinite;
+  }
 }
