@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import WebsiteAnalytics from "@/components/analytics/WebsiteAnalytics";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -184,6 +185,9 @@ const Dashboard = () => {
               </Button>
             </div>
           </div>
+
+          {/* Analytics */}
+          <WebsiteAnalytics websites={websites.filter(w => w.status === "live").map(w => ({ id: w.id, name: w.name }))} />
 
           {/* Search & Filter */}
           {websites.length > 0 && (
