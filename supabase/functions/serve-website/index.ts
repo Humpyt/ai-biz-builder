@@ -20,7 +20,7 @@ serve(async (req) => {
 
     const { data: website, error } = await supabase
       .from("websites")
-      .select("name, generated_html, generated_css, generated_js, status")
+      .select("name, description, industry, generated_html, generated_css, generated_js, status")
       .eq("subdomain", subdomain)
       .eq("status", "live")
       .single();
@@ -32,23 +32,31 @@ serve(async (req) => {
       );
     }
 
-    // If generated_html is a full document, serve it directly with CSS/JS injected
+    const seoTitle = website.name;
+    const seoDesc = (website.description || `${website.name} — a professional ${website.industry} business`).replace(/"/g, '&quot;');
+    const seoMeta = `
+  <meta name="description" content="${seoDesc}">
+  <meta property="og:title" content="${seoTitle.replace(/"/g, '&quot;')}">
+  <meta property="og:description" content="${seoDesc}">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="${seoTitle.replace(/"/g, '&quot;')}">
+  <meta name="twitter:description" content="${seoDesc}">`;
+
     let fullHtml: string;
     const html = website.generated_html || "";
     
     if (html.trim().toLowerCase().startsWith("<!doctype") || html.trim().toLowerCase().startsWith("<html")) {
-      // Full document — inject CSS and JS into it
       fullHtml = html
-        .replace("</head>", `<style>${website.generated_css || ""}</style></head>`)
+        .replace("</head>", `${seoMeta}\n<style>${website.generated_css || ""}</style></head>`)
         .replace("</body>", `<script>${website.generated_js || ""}</script></body>`);
     } else {
-      // Partial HTML — wrap it
       fullHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${website.name}</title>
+  <title>${seoTitle}</title>${seoMeta}
   <style>${website.generated_css || ""}</style>
 </head>
 <body>
