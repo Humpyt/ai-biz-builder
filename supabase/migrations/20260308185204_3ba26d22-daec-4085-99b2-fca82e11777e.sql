@@ -1,0 +1,1 @@
+ALTER TABLE public.websites ADD COLUMN chat_widget_enabled boolean NOT NULL DEFAULT true;
