@@ -7,6 +7,140 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// ── helpers ──
+
+async function callAI(apiKey: string, model: string, messages: any[], tools?: any[], toolChoice?: any) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 90_000);
+
+  try {
+    const body: any = { model, messages };
+    if (tools) body.tools = tools;
+    if (toolChoice) body.tool_choice = toolChoice;
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const status = res.status;
+      const errText = await res.text();
+      console.error("AI gateway error:", status, errText);
+      throw Object.assign(new Error(`AI gateway error: ${status}`), { status });
+    }
+
+    return await res.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function generateImage(apiKey: string, prompt: string): Promise<string | null> {
+  try {
+    const data = await callAI(apiKey, "google/gemini-2.5-flash-image", [
+      { role: "user", content: prompt },
+    ]);
+
+    const images = data.choices?.[0]?.message?.images;
+    if (images && images.length > 0) {
+      return images[0].image_url?.url || null;
+    }
+    return null;
+  } catch (e) {
+    console.error("Image generation failed:", e);
+    return null;
+  }
+}
+
+async function uploadBase64Image(
+  supabase: any,
+  base64Url: string,
+  websiteId: string,
+  imageName: string
+): Promise<string | null> {
+  try {
+    const base64Data = base64Url.split(",")[1];
+    if (!base64Data) return null;
+
+    const binaryStr = atob(base64Data);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) {
+      bytes[i] = binaryStr.charCodeAt(i);
+    }
+
+    const path = `${websiteId}/${imageName}.png`;
+    const { error } = await supabase.storage
+      .from("website-images")
+      .upload(path, bytes, { contentType: "image/png", upsert: true });
+
+    if (error) {
+      console.error("Upload error:", error);
+      return null;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("website-images")
+      .getPublicUrl(path);
+
+    return publicUrl;
+  } catch (e) {
+    console.error("Upload failed:", e);
+    return null;
+  }
+}
+
+// ── tool schema for structured output ──
+
+const websiteToolSchema = {
+  type: "function",
+  function: {
+    name: "create_website",
+    description: "Create a multi-page website with HTML, CSS, and JS for each page, plus image descriptions for generation.",
+    parameters: {
+      type: "object",
+      properties: {
+        pages: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              slug: { type: "string", description: "URL slug: 'index' for home, 'about', 'services', 'contact'" },
+              title: { type: "string", description: "Page title" },
+              html: { type: "string", description: "Complete HTML for this page" },
+              css: { type: "string", description: "CSS for this page" },
+              js: { type: "string", description: "JavaScript for this page" },
+            },
+            required: ["slug", "title", "html", "css", "js"],
+            additionalProperties: false,
+          },
+        },
+        shared_css: { type: "string", description: "Shared CSS across all pages (reset, variables, nav, footer)" },
+        shared_js: { type: "string", description: "Shared JS across all pages (nav toggle, smooth scroll)" },
+        image_prompts: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              id: { type: "string", description: "Unique ID used as img src placeholder like __IMG_hero__" },
+              prompt: { type: "string", description: "Detailed prompt to generate this image" },
+            },
+            required: ["id", "prompt"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["pages", "shared_css", "shared_js", "image_prompts"],
+      additionalProperties: false,
+    },
+  },
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -24,7 +158,6 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Verify user
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) throw new Error("Unauthorized");
@@ -52,14 +185,8 @@ serve(async (req) => {
     if (fetchError || !website) throw new Error("Website not found");
 
     // ── Subscription enforcement ──
-    const planLimits: Record<string, number> = {
-      free: 1,
-      starter: 1,
-      business: 5,
-      enterprise: Infinity,
-    };
+    const planLimits: Record<string, number> = { free: 1, starter: 1, business: 5, enterprise: Infinity };
 
-    // Get user's active subscription
     const { data: sub } = await supabase
       .from("subscriptions")
       .select("plan, status, expires_at")
@@ -72,16 +199,14 @@ serve(async (req) => {
     const currentPlan = sub?.plan || "free";
     const limit = planLimits[currentPlan] ?? 1;
 
-    // Check if subscription is expired
     if (sub?.expires_at && new Date(sub.expires_at) < new Date()) {
       await supabase.from("websites").update({ status: "failed" }).eq("id", websiteId);
       return new Response(
-        JSON.stringify({ error: "Your subscription has expired. Please renew to generate websites." }),
+        JSON.stringify({ error: "Your subscription has expired. Please renew." }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Count existing websites (exclude current one being generated)
     const { count } = await supabase
       .from("websites")
       .select("id", { count: "exact", head: true })
@@ -92,44 +217,39 @@ serve(async (req) => {
     if ((count ?? 0) >= limit) {
       await supabase.from("websites").delete().eq("id", websiteId);
       return new Response(
-        JSON.stringify({
-          error: `Your ${currentPlan} plan allows ${limit} website${limit > 1 ? "s" : ""}. Please upgrade to create more.`,
-        }),
+        JSON.stringify({ error: `Your ${currentPlan} plan allows ${limit} website${limit > 1 ? "s" : ""}. Upgrade to create more.` }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     // Update status to generating
-    await supabase
-      .from("websites")
-      .update({ status: "generating" })
-      .eq("id", websiteId);
+    await supabase.from("websites").update({ status: "generating" }).eq("id", websiteId);
 
-    const systemPrompt = `You are an expert web developer. Generate a complete, modern, responsive single-page website for a business. Return ONLY valid JSON with three keys: "html", "css", and "js".
+    // ── AI prompt ──
+    const systemPrompt = `You are an expert web developer. Generate a complete, modern, multi-page responsive website for a business.
 
-Requirements:
-- The HTML should be semantic, accessible, and include all sections: hero/header, about, services/products, contact, and footer
-- The CSS should be modern, responsive (mobile-first), and use the specified color scheme
-- The JS should handle mobile menu toggle, smooth scrolling, and any interactive elements
-- Include proper meta tags, viewport settings
-- Make it visually stunning and professional
-- Use the business information provided to fill in real content
-- Do NOT use any external libraries or CDNs
-- The HTML should be a complete document with <!DOCTYPE html>
+Pages to generate: Home (slug: "index"), About (slug: "about"), Services (slug: "services"), Contact (slug: "contact").
 
-SEO & Social Sharing Requirements:
-- Include Open Graph meta tags: og:title, og:description, og:type, og:url
-- Include Twitter Card meta tags: twitter:card, twitter:title, twitter:description
-- Include a canonical link tag
-- Add JSON-LD structured data (LocalBusiness schema) with name, description, address, telephone, and email
-- Use semantic HTML5 elements (header, nav, main, section, article, footer)
-- Add descriptive alt attributes to all images
-- Include a proper <title> tag with the business name and industry
+Requirements for each page:
+- Semantic, accessible HTML5 with a consistent navigation bar linking all pages
+- Navigation links should use anchors like: index.html, about.html, services.html, contact.html
+- Each page should have its own specific content appropriate to its purpose
+- Mobile-first responsive CSS using the specified color scheme
+- The Home page should have: hero section, brief about, featured services, call-to-action
+- The About page: company story, mission, team section
+- The Services page: detailed service/product listings with descriptions
+- The Contact page: contact form (name, email, message), map placeholder, business info
 
-IMPORTANT: Return ONLY a JSON object like {"html": "...", "css": "...", "js": "..."} with no markdown formatting, no code blocks, no explanation.`;
+shared_css: Include CSS reset, CSS variables for colors, nav styles, footer styles, responsive utilities.
+shared_js: Include mobile nav toggle, smooth scrolling, form validation on contact page.
 
-    const userPrompt = `Create a website for this business:
+Image placeholders: Use __IMG_<id>__ as src attributes for images (e.g. <img src="__IMG_hero__">). Provide descriptive prompts in image_prompts for each placeholder. Generate 2-4 image prompts for key visuals (hero, about, services).
 
+SEO: Include Open Graph tags, Twitter cards, canonical links, JSON-LD (LocalBusiness), semantic HTML, alt text on images, proper <title> tags.
+
+Do NOT use external libraries or CDNs. Each page's HTML should be a complete document with <!DOCTYPE html>.`;
+
+    const userPrompt = `Create a website for:
 Business Name: ${website.name}
 Industry: ${website.industry}
 Description: ${website.description || "A professional business"}
@@ -140,78 +260,149 @@ Contact Email: ${website.contact_email || ""}
 Phone: ${website.phone || ""}
 Location: ${website.location || ""}
 
-Make the website reflect the ${website.industry} industry with appropriate imagery descriptions, icons, and professional tone.`;
+Make it reflect the ${website.industry} industry with appropriate tone and professionalism.`;
 
-    const aiResponse = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: selectedModel,
-          messages: [
+    // Call AI with tool calling for structured output (with retry)
+    let parsed: any;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const aiData = await callAI(
+          LOVABLE_API_KEY,
+          selectedModel,
+          [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
           ],
-        }),
+          [websiteToolSchema],
+          { type: "function", function: { name: "create_website" } }
+        );
+
+        const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
+        if (toolCall?.function?.arguments) {
+          parsed = JSON.parse(toolCall.function.arguments);
+          break;
+        }
+
+        // Fallback: try parsing message content as JSON
+        const content = aiData.choices?.[0]?.message?.content;
+        if (content) {
+          let clean = content.trim();
+          if (clean.startsWith("```")) {
+            clean = clean.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+          }
+          parsed = JSON.parse(clean);
+          break;
+        }
+
+        throw new Error("No parseable response from AI");
+      } catch (e: any) {
+        if (e.status === 429 || e.status === 402) {
+          await supabase.from("websites").update({ status: "failed" }).eq("id", websiteId);
+          return new Response(
+            JSON.stringify({ error: e.status === 429 ? "Rate limited. Please try again later." : "AI credits exhausted." }),
+            { status: e.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        if (attempt === 1) {
+          console.error("AI generation failed after retry:", e);
+          await supabase.from("websites").update({ status: "failed" }).eq("id", websiteId);
+          throw new Error("Failed to generate website after retry");
+        }
+        console.warn("Attempt", attempt + 1, "failed, retrying...", e.message);
       }
+    }
+
+    // ── Generate images and replace placeholders ──
+    const imagePrompts = parsed.image_prompts || [];
+    const imageMap: Record<string, string> = {};
+
+    // Generate images in parallel (max 4)
+    const imageResults = await Promise.allSettled(
+      imagePrompts.slice(0, 4).map(async (img: { id: string; prompt: string }) => {
+        const base64 = await generateImage(LOVABLE_API_KEY, img.prompt);
+        if (base64) {
+          const publicUrl = await uploadBase64Image(supabase, base64, websiteId, img.id);
+          if (publicUrl) {
+            imageMap[`__IMG_${img.id}__`] = publicUrl;
+          }
+        }
+      })
     );
 
-    if (!aiResponse.ok) {
-      const status = aiResponse.status;
-      if (status === 429) {
-        await supabase.from("websites").update({ status: "failed" }).eq("id", websiteId);
-        return new Response(
-          JSON.stringify({ error: "Rate limited. Please try again in a moment." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+    // Replace image placeholders in all page HTML
+    const replaceImages = (html: string) => {
+      let result = html;
+      for (const [placeholder, url] of Object.entries(imageMap)) {
+        result = result.replaceAll(placeholder, url);
       }
-      if (status === 402) {
-        await supabase.from("websites").update({ status: "failed" }).eq("id", websiteId);
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please add credits." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      const errText = await aiResponse.text();
-      console.error("AI gateway error:", status, errText);
-      await supabase.from("websites").update({ status: "failed" }).eq("id", websiteId);
-      throw new Error(`AI gateway error: ${status}`);
+      return result;
+    };
+
+    const pages = parsed.pages || [];
+    const sharedCss = parsed.shared_css || "";
+    const sharedJs = parsed.shared_js || "";
+
+    // Use the first page (index) as the "main" website content for backward compat
+    const indexPage = pages.find((p: any) => p.slug === "index") || pages[0];
+    const mainHtml = indexPage ? replaceImages(indexPage.html) : "";
+    const mainCss = sharedCss + "\n" + (indexPage?.css || "");
+    const mainJs = sharedJs + "\n" + (indexPage?.js || "");
+
+    // ── Save version history ──
+    const { data: latestVersion } = await supabase
+      .from("website_versions")
+      .select("version_number")
+      .eq("website_id", websiteId)
+      .order("version_number", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const nextVersion = (latestVersion?.version_number || 0) + 1;
+
+    const pagesForVersion = pages.map((p: any) => ({
+      slug: p.slug,
+      title: p.title,
+      html: replaceImages(p.html),
+      css: p.css,
+      js: p.js,
+    }));
+
+    await supabase.from("website_versions").insert({
+      website_id: websiteId,
+      version_number: nextVersion,
+      generated_html: mainHtml,
+      generated_css: mainCss,
+      generated_js: mainJs,
+      pages: pagesForVersion,
+      model_used: selectedModel,
+    });
+
+    // ── Save pages to website_pages table ──
+    // Delete old pages first
+    await supabase.from("website_pages").delete().eq("website_id", websiteId);
+
+    // Insert new pages
+    const pageInserts = pages.map((p: any, i: number) => ({
+      website_id: websiteId,
+      slug: p.slug,
+      title: p.title,
+      generated_html: replaceImages(p.html),
+      generated_css: sharedCss + "\n" + (p.css || ""),
+      generated_js: sharedJs + "\n" + (p.js || ""),
+      sort_order: i,
+    }));
+
+    if (pageInserts.length > 0) {
+      await supabase.from("website_pages").insert(pageInserts);
     }
 
-    const aiData = await aiResponse.json();
-    const content = aiData.choices?.[0]?.message?.content;
-
-    if (!content) {
-      await supabase.from("websites").update({ status: "failed" }).eq("id", websiteId);
-      throw new Error("No content from AI");
-    }
-
-    // Parse the JSON response - handle potential markdown wrapping
-    let parsed;
-    try {
-      let cleanContent = content.trim();
-      // Remove markdown code blocks if present
-      if (cleanContent.startsWith("```")) {
-        cleanContent = cleanContent.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
-      }
-      parsed = JSON.parse(cleanContent);
-    } catch (e) {
-      console.error("Failed to parse AI response:", content.substring(0, 500));
-      await supabase.from("websites").update({ status: "failed" }).eq("id", websiteId);
-      throw new Error("Failed to parse AI-generated website code");
-    }
-
-    // Update website with generated code
+    // ── Update main website record ──
     const { error: updateError } = await supabase
       .from("websites")
       .update({
-        generated_html: parsed.html || "",
-        generated_css: parsed.css || "",
-        generated_js: parsed.js || "",
+        generated_html: mainHtml,
+        generated_css: mainCss,
+        generated_js: mainJs,
         status: "live",
       })
       .eq("id", websiteId);
@@ -222,7 +413,7 @@ Make the website reflect the ${website.industry} industry with appropriate image
     }
 
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, version: nextVersion, pages: pages.length, images: Object.keys(imageMap).length }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
