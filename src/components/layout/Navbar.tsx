@@ -1,11 +1,13 @@
 import { Button } from "@/components/ui/button";
-import { Globe, LogOut } from "lucide-react";
+import { Globe, LogOut, Shield } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const Navbar = () => {
   const { user, profile, signOut } = useAuth();
+  const { isAdmin } = useAdminCheck();
 
   return (
     <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b">
@@ -25,6 +27,12 @@ const Navbar = () => {
           {user && (
             <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Dashboard
+            </Link>
+          )}
+          {isAdmin && (
+            <Link to="/admin" className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
+              <Shield className="w-3.5 h-3.5" />
+              Admin
             </Link>
           )}
         </div>
