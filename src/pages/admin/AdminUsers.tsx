@@ -197,7 +197,25 @@ const AdminUsers = () => {
                       </TableCell>
                       <TableCell>{format(new Date(p.created_at), "MMM d, yyyy")}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary">Active</Badge>
+                        {p.banned ? (
+                          <Badge variant="destructive">Banned</Badge>
+                        ) : (
+                          <Badge variant="secondary">Active</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant={p.banned ? "outline" : "destructive"}
+                          size="sm"
+                          className="text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setBanConfirm({ userId: p.user_id, name: p.display_name || "this user", currentlyBanned: p.banned });
+                          }}
+                        >
+                          <Ban className="h-3 w-3 mr-1" />
+                          {p.banned ? "Unban" : "Ban"}
+                        </Button>
                       </TableCell>
                     </TableRow>
                     {expandedUser === p.user_id && (
