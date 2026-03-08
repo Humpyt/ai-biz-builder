@@ -162,7 +162,7 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) throw new Error("Unauthorized");
 
-    const { websiteId, model, pageSlug } = await req.json();
+    const { websiteId, model, pageSlug, customPrompt } = await req.json();
     if (!websiteId) throw new Error("Missing websiteId");
 
     const allowedModels = [
@@ -269,7 +269,7 @@ Contact Email: ${website.contact_email || ""}
 Phone: ${website.phone || ""}
 Location: ${website.location || ""}
 
-Make it fresh, modern, and reflect the ${website.industry} industry.`;
+Make it fresh, modern, and reflect the ${website.industry} industry.${customPrompt ? `\n\nAdditional instructions from the user: ${customPrompt}` : ""}`;
 
       const singlePageToolSchema = {
         type: "function",

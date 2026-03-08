@@ -3,13 +3,14 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, Sparkles, RefreshCw, Eye, EyeOff, Bot, Globe, Code, Pencil, History, FileText } from "lucide-react";
+import { ArrowLeft, Save, Sparkles, RefreshCw, Eye, EyeOff, Bot, Globe, Code, Pencil, History, FileText, MessageSquare } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const aiModels = [
   { id: "google/gemini-3-flash-preview", name: "Gemini 3 Flash", desc: "Fast & balanced" },
@@ -77,6 +78,8 @@ const Editor = () => {
   const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [regeneratingPage, setRegeneratingPage] = useState<string | null>(null);
+  const [pagePrompt, setPagePrompt] = useState("");
+  const [promptPopoverOpen, setPromptPopoverOpen] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(true);
   const [editorTab, setEditorTab] = useState("form");
 
@@ -261,13 +264,16 @@ const Editor = () => {
     pollForCompletion();
   };
 
-  const handleRegeneratePage = async (pageSlug: string) => {
+  const handleRegeneratePage = async (pageSlug: string, customPrompt?: string) => {
     if (!websiteId) return;
     setRegeneratingPage(pageSlug);
+    setPromptPopoverOpen(null);
+    setPagePrompt("");
 
-    const { error } = await supabase.functions.invoke("generate-website", {
-      body: { websiteId, model: selectedModel, pageSlug },
-    });
+    const body: Record<string, string> = { websiteId, model: selectedModel, pageSlug };
+    if (customPrompt?.trim()) body.customPrompt = customPrompt.trim();
+
+    const { error } = await supabase.functions.invoke("generate-website", { body });
 
     if (error) {
       toast.error(`Failed to regenerate ${pageSlug} page`);
@@ -453,23 +459,61 @@ const Editor = () => {
                 {page.title}
               </button>
               {activePage === page.slug && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 flex-shrink-0"
-                  disabled={regeneratingPage === page.slug || regenerating}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRegeneratePage(page.slug);
+                <Popover
+                  open={promptPopoverOpen === page.slug}
+                  onOpenChange={(open) => {
+                    setPromptPopoverOpen(open ? page.slug : null);
+                    if (!open) setPagePrompt("");
                   }}
-                  title={`Regenerate ${page.title}`}
                 >
-                  {regeneratingPage === page.slug ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <RefreshCw className="w-3.5 h-3.5" />
-                  )}
-                </Button>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 flex-shrink-0"
+                      disabled={regeneratingPage === page.slug || regenerating}
+                      title={`Regenerate ${page.title}`}
+                    >
+                      {regeneratingPage === page.slug ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-3" align="start">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Regenerate {page.title}</p>
+                      <Textarea
+                        placeholder="Optional: Add instructions like 'make it more modern' or 'add testimonials'..."
+                        value={pagePrompt}
+                        onChange={(e) => setPagePrompt(e.target.value)}
+                        className="text-sm min-h-[60px] resize-none"
+                        rows={2}
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => handleRegeneratePage(page.slug, pagePrompt)}
+                        >
+                          <Sparkles className="w-3.5 h-3.5 mr-1" />
+                          Regenerate
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setPromptPopoverOpen(null);
+                            setPagePrompt("");
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               )}
             </div>
           ))}
