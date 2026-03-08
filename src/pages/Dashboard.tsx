@@ -136,7 +136,38 @@ const Dashboard = () => {
             </Button>
           </div>
 
-          {loading ? (
+          {/* Subscription status */}
+          <div className="bg-card rounded-xl shadow-card p-5 mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <CreditCard className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Current Plan</p>
+                <p className="font-semibold capitalize">{subscription?.plan || "Free"}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CalendarClock className="w-4 h-4" />
+                {subscription?.expires_at
+                  ? `Expires ${format(new Date(subscription.expires_at), "MMM d, yyyy")}`
+                  : "No expiry"}
+              </div>
+              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                subscription?.status === "active"
+                  ? "bg-primary/10 text-primary"
+                  : "bg-muted text-muted-foreground"
+              }`}>
+                {subscription?.status || "active"}
+              </span>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/pricing">Upgrade</Link>
+              </Button>
+            </div>
+          </div>
+
+
             <div className="text-center py-12 text-muted-foreground animate-pulse">
               Loading your websites...
             </div>
