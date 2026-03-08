@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.serve-website]
 verify_jwt = false
+
+[functions.chat-widget]
+verify_jwt = false
