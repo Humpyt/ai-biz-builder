@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, TrendingUp, FileText, Users } from "lucide-react";
+import { Eye, TrendingUp, FileText, Users, Globe } from "lucide-react";
 import { format, subDays, startOfDay, eachDayOfInterval } from "date-fns";
 
 interface PageView {
