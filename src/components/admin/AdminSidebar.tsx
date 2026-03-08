@@ -21,6 +21,7 @@ const items = [
   { title: "Users", url: "/admin/users", icon: Users },
   { title: "Websites", url: "/admin/websites", icon: Globe },
   { title: "Subscriptions", url: "/admin/subscriptions", icon: CreditCard },
+  { title: "Analytics", url: "/admin/analytics", icon: Activity },
 ];
 
 export function AdminSidebar() {
