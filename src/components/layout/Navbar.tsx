@@ -12,6 +12,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useState } from "react";
+import { useTheme } from "next-themes";
 
 const Navbar = () => {
   const { user, profile, signOut } = useAuth();
