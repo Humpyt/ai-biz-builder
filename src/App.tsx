@@ -9,6 +9,8 @@ import Pricing from "./pages/Pricing";
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
+import Generating from "./pages/Generating";
+import Preview from "./pages/Preview";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -30,6 +32,12 @@ const App = () => (
             } />
             <Route path="/dashboard" element={
               <ProtectedRoute><Dashboard /></ProtectedRoute>
+            } />
+            <Route path="/generating" element={
+              <ProtectedRoute><Generating /></ProtectedRoute>
+            } />
+            <Route path="/preview" element={
+              <ProtectedRoute><Preview /></ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />
           </Routes>

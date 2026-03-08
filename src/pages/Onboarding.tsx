@@ -5,7 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import Navbar from "@/components/layout/Navbar";
-import { ArrowLeft, ArrowRight, Check, Globe, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const industries = [
   "Restaurant / Food", "Retail / Shop", "Salon / Beauty", "Health / Clinic",
@@ -39,7 +42,9 @@ const steps = ["Business Info", "Details", "Appearance", "Contact"];
 
 const Onboarding = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [step, setStep] = useState(0);
+  const [generating, setGenerating] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     businessName: "", subdomain: "", industry: "", description: "",
     services: "", targetAudience: "", colorScheme: "", contactEmail: "",
@@ -57,10 +62,58 @@ const Onboarding = () => {
     return true;
   };
 
-  const handleGenerate = () => {
-    // Store form data and navigate to dashboard
-    localStorage.setItem("ugbiz_onboarding", JSON.stringify(formData));
-    navigate("/dashboard");
+  const handleGenerate = async () => {
+    if (!user) return;
+    setGenerating(true);
+
+    try {
+      // Create website record
+      const subdomain = formData.subdomain || formData.businessName.toLowerCase().replace(/[^a-z0-9]/g, "-");
+      const { data: website, error: insertError } = await supabase
+        .from("websites")
+        .insert({
+          user_id: user.id,
+          name: formData.businessName,
+          subdomain,
+          industry: formData.industry,
+          description: formData.description,
+          services: formData.services,
+          target_audience: formData.targetAudience,
+          color_scheme: formData.colorScheme,
+          contact_email: formData.contactEmail,
+          phone: formData.phone,
+          location: formData.location,
+          status: "pending",
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        if (insertError.message.includes("unique")) {
+          toast.error("That subdomain is already taken. Please choose another.");
+        } else {
+          toast.error("Failed to create website. Please try again.");
+        }
+        setGenerating(false);
+        return;
+      }
+
+      // Navigate to generating page
+      navigate(`/generating?id=${website.id}`);
+
+      // Trigger generation
+      const { error: fnError } = await supabase.functions.invoke("generate-website", {
+        body: { websiteId: website.id },
+      });
+
+      if (fnError) {
+        console.error("Generation trigger error:", fnError);
+      }
+    } catch (e) {
+      console.error("Generate error:", e);
+      toast.error("Something went wrong. Please try again.");
+      setGenerating(false);
+    }
   };
 
   return (
@@ -274,9 +327,10 @@ const Onboarding = () => {
                 <Button
                   variant="hero"
                   onClick={handleGenerate}
-                  disabled={!canProceed()}
+                  disabled={!canProceed() || generating}
                 >
-                  <Sparkles className="w-4 h-4" /> Generate My Website
+                  <Sparkles className="w-4 h-4" />
+                  {generating ? "Creating..." : "Generate My Website"}
                 </Button>
               )}
             </div>
