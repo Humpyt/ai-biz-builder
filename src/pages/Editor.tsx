@@ -618,6 +618,19 @@ const Editor = () => {
                   <Input value={customDomain} onChange={(e) => setCustomDomain(e.target.value)} placeholder="e.g. www.mybusiness.com" />
                   <p className="text-xs text-muted-foreground mt-1.5">Save your desired domain. Public hosting coming soon.</p>
                 </div>
+                <div className="pt-4 border-t">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium flex items-center gap-1.5">
+                      <MessageCircle className="w-4 h-4" /> AI Chat Widget
+                    </label>
+                    <Switch checked={chatWidgetEnabled} onCheckedChange={setChatWidgetEnabled} />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    {chatWidgetEnabled
+                      ? "Visitors can chat with an AI assistant about your business."
+                      : "Chat widget is disabled for this website."}
+                  </p>
+                </div>
               </div>
             </TabsContent>
 
