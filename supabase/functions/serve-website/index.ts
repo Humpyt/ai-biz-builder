@@ -155,8 +155,8 @@ serve(async (req) => {
   <meta name="twitter:title" content="${seoTitle.replace(/"/g, '&quot;')}">
   <meta name="twitter:description" content="${seoDesc}">`;
 
-    // Chat widget code
-    const chatWidgetCode = buildChatWidget(website.id, website.name);
+    // Chat widget code (only if enabled)
+    const chatWidgetCode = website.chat_widget_enabled !== false ? buildChatWidget(website.id, website.name) : "";
 
     let fullHtml: string;
 
