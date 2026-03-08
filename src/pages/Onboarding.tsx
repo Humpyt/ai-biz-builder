@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import Navbar from "@/components/layout/Navbar";
-import { ArrowLeft, ArrowRight, Check, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Sparkles, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -51,11 +51,38 @@ const Onboarding = () => {
     phone: "", location: "",
   });
 
+  // Subdomain validation state
+  const [subdomainStatus, setSubdomainStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+
   const update = (field: keyof FormData, value: string) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
 
+  // Debounced subdomain check
+  const checkSubdomain = useCallback(async (subdomain: string) => {
+    if (!subdomain || subdomain.length < 3) {
+      setSubdomainStatus("idle");
+      return;
+    }
+    setSubdomainStatus("checking");
+    const { count } = await supabase
+      .from("websites")
+      .select("id", { count: "exact", head: true })
+      .eq("subdomain", subdomain);
+    setSubdomainStatus((count ?? 0) > 0 ? "taken" : "available");
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      checkSubdomain(formData.subdomain);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [formData.subdomain, checkSubdomain]);
+
   const canProceed = () => {
-    if (step === 0) return formData.businessName && formData.industry;
+    if (step === 0) {
+      const subdomainOk = !formData.subdomain || subdomainStatus === "available";
+      return formData.businessName && formData.industry && subdomainOk && subdomainStatus !== "checking";
+    }
     if (step === 1) return formData.description;
     if (step === 2) return formData.colorScheme;
     if (step === 3) return formData.contactEmail;
@@ -67,7 +94,6 @@ const Onboarding = () => {
     setGenerating(true);
 
     try {
-      // ── Client-side subscription check ──
       const planLimits: Record<string, number> = {
         free: 1, starter: 1, business: 5, enterprise: Infinity,
       };
@@ -101,7 +127,6 @@ const Onboarding = () => {
         return;
       }
 
-      // Create website record
       const subdomain = formData.subdomain || formData.businessName.toLowerCase().replace(/[^a-z0-9]/g, "-");
       const { data: website, error: insertError } = await supabase
         .from("websites")
@@ -132,10 +157,8 @@ const Onboarding = () => {
         return;
       }
 
-      // Navigate to generating page
       navigate(`/generating?id=${website.id}`);
 
-      // Trigger generation
       const { error: fnError } = await supabase.functions.invoke("generate-website", {
         body: { websiteId: website.id },
       });
@@ -147,6 +170,20 @@ const Onboarding = () => {
       console.error("Generate error:", e);
       toast.error("Something went wrong. Please try again.");
       setGenerating(false);
+    }
+  };
+
+  const subdomainIndicator = () => {
+    if (!formData.subdomain || formData.subdomain.length < 3) return null;
+    switch (subdomainStatus) {
+      case "checking":
+        return <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />;
+      case "available":
+        return <CheckCircle2 className="w-4 h-4 text-primary" />;
+      case "taken":
+        return <XCircle className="w-4 h-4 text-destructive" />;
+      default:
+        return null;
     }
   };
 
@@ -202,13 +239,25 @@ const Onboarding = () => {
                       <div>
                         <label className="text-sm font-medium mb-1.5 block">Desired Subdomain</label>
                         <div className="flex items-center gap-2">
-                          <Input
-                            placeholder="toms-restaurant"
-                            value={formData.subdomain}
-                            onChange={(e) => update("subdomain", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
-                          />
+                          <div className="relative flex-1">
+                            <Input
+                              placeholder="toms-restaurant"
+                              value={formData.subdomain}
+                              onChange={(e) => update("subdomain", e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                              className={subdomainStatus === "taken" ? "border-destructive focus-visible:ring-destructive" : subdomainStatus === "available" ? "border-primary focus-visible:ring-primary" : ""}
+                            />
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                              {subdomainIndicator()}
+                            </div>
+                          </div>
                           <span className="text-sm text-muted-foreground whitespace-nowrap">.ugbiz.com</span>
                         </div>
+                        {subdomainStatus === "taken" && (
+                          <p className="text-xs text-destructive mt-1">This subdomain is already taken. Try another.</p>
+                        )}
+                        {subdomainStatus === "available" && (
+                          <p className="text-xs text-primary mt-1">This subdomain is available!</p>
+                        )}
                       </div>
                       <div>
                         <label className="text-sm font-medium mb-1.5 block">Industry</label>

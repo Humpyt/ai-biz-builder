@@ -17,6 +17,7 @@ import Generating from "./pages/Generating";
 import Preview from "./pages/Preview";
 import Editor from "./pages/Editor";
 import Payment from "./pages/Payment";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
@@ -59,6 +60,9 @@ const App = () => (
             } />
             <Route path="/payment" element={
               <ProtectedRoute><Payment /></ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute><Settings /></ProtectedRoute>
             } />
             <Route path="/admin" element={<AdminRoute><AdminOverview /></AdminRoute>} />
             <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />

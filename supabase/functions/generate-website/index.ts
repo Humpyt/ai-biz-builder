@@ -117,6 +117,15 @@ Requirements:
 - Do NOT use any external libraries or CDNs
 - The HTML should be a complete document with <!DOCTYPE html>
 
+SEO & Social Sharing Requirements:
+- Include Open Graph meta tags: og:title, og:description, og:type, og:url
+- Include Twitter Card meta tags: twitter:card, twitter:title, twitter:description
+- Include a canonical link tag
+- Add JSON-LD structured data (LocalBusiness schema) with name, description, address, telephone, and email
+- Use semantic HTML5 elements (header, nav, main, section, article, footer)
+- Add descriptive alt attributes to all images
+- Include a proper <title> tag with the business name and industry
+
 IMPORTANT: Return ONLY a JSON object like {"html": "...", "css": "...", "js": "..."} with no markdown formatting, no code blocks, no explanation.`;
 
     const userPrompt = `Create a website for this business:
