@@ -4,7 +4,8 @@ import { ArrowRight, Globe, Sparkles, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const HeroSection = () => (
-  <section className="relative min-h-[90vh] flex items-center overflow-hidden">
+  <section className="relative min-h-[90vh] flex items-center overflow-hidden" aria-label="Hero">
+    <h1 className="sr-only">UgBiz — AI-Powered Website Builder for Ugandan Businesses</h1>
     {/* Background decoration */}
     <div className="absolute inset-0 overflow-hidden">
       <div className="absolute top-20 -right-20 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
@@ -25,15 +26,17 @@ const HeroSection = () => (
           </span>
         </motion.div>
 
-        <motion.h1
+        <motion.p
+          role="presentation"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
           className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-[1.1]"
+          aria-hidden="true"
         >
           Your Business Online{" "}
           <span className="text-gradient-hero">In Minutes</span>
-        </motion.h1>
+        </motion.p>
 
         <motion.p
           initial={{ opacity: 0, y: 20 }}
