@@ -9,6 +9,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 
+const aiModels = [
+  { id: "google/gemini-3-flash-preview", name: "Gemini 3 Flash", desc: "Fast & balanced" },
+  { id: "google/gemini-2.5-flash", name: "Gemini 2.5 Flash", desc: "Good multimodal" },
+  { id: "google/gemini-2.5-pro", name: "Gemini 2.5 Pro", desc: "Best quality" },
+  { id: "openai/gpt-5-mini", name: "GPT-5 Mini", desc: "Strong & affordable" },
+  { id: "openai/gpt-5", name: "GPT-5", desc: "Most powerful" },
+];
+
 const colorSchemes = [
   { name: "Earth Tones", colors: ["#8B6F47", "#2D5016", "#D4A574"] },
   { name: "Ocean Blue", colors: ["#1E40AF", "#06B6D4", "#F0F9FF"] },
