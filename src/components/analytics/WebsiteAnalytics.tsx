@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Eye, TrendingUp, FileText, Users } from "lucide-react";
+import { Eye, TrendingUp, FileText, Users, Globe } from "lucide-react";
 import { format, subDays, startOfDay, eachDayOfInterval } from "date-fns";
 
 interface PageView {
@@ -11,6 +11,7 @@ interface PageView {
   page_slug: string;
   viewed_at: string;
   referer: string | null;
+  country: string | null;
 }
 
 interface Website {
@@ -39,7 +40,7 @@ export default function WebsiteAnalytics({ websites }: { websites: Website[] }) 
 
       let query = supabase
         .from("page_views")
-        .select("id, website_id, page_slug, viewed_at, referer")
+        .select("id, website_id, page_slug, viewed_at, referer, country")
         .gte("viewed_at", since)
         .order("viewed_at", { ascending: false });
 
@@ -91,6 +92,18 @@ export default function WebsiteAnalytics({ websites }: { websites: Website[] }) 
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 5);
+  }, [views]);
+
+  const countryBreakdown = useMemo(() => {
+    const counts: Record<string, number> = {};
+    views.forEach((v) => {
+      const country = v.country || "Unknown";
+      counts[country] = (counts[country] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
   }, [views]);
 
   const totalViews = views.length;
@@ -152,6 +165,7 @@ export default function WebsiteAnalytics({ websites }: { websites: Website[] }) 
           No page views yet. Share your website to start tracking visitors!
         </div>
       ) : (
+        <>
         <div className="grid md:grid-cols-3 gap-6">
           {/* Bar chart - views over time */}
           <div className="md:col-span-2">
@@ -215,6 +229,55 @@ export default function WebsiteAnalytics({ websites }: { websites: Website[] }) 
             ) : null}
           </div>
         </div>
+
+        {/* Country breakdown */}
+        {countryBreakdown.length > 0 && (
+          <div className="mt-6 pt-6 border-t border-border">
+            <h3 className="text-sm font-medium text-muted-foreground mb-4 flex items-center gap-2">
+              <Globe className="w-4 h-4" /> Visitor Countries
+            </h3>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={countryBreakdown} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis type="number" allowDecimals={false} tick={{ fill: "hsl(var(--muted-foreground))" }} />
+                    <YAxis type="category" dataKey="name" width={100} tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                        color: "hsl(var(--foreground))",
+                      }}
+                    />
+                    <Bar dataKey="value" fill="hsl(var(--accent))" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="space-y-2">
+                {countryBreakdown.map((c, i) => {
+                  const pct = totalViews > 0 ? Math.round((c.value / totalViews) * 100) : 0;
+                  return (
+                    <div key={c.name} className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">{c.name}</span>
+                      <div className="flex items-center gap-3">
+                        <div className="w-24 bg-muted rounded-full h-2 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-accent"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <span className="font-medium w-12 text-right">{c.value} <span className="text-muted-foreground text-xs">({pct}%)</span></span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+        </>
       )}
     </div>
   );

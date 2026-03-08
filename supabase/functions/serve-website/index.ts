@@ -187,14 +187,37 @@ ${chatWidgetCode}
     const userAgent = req.headers.get("user-agent") || "";
     const referer = req.headers.get("referer") || "";
 
+    // Insert page view then try to resolve country async
     supabase.from("page_views").insert({
       website_id: website.id,
       page_slug: slug,
       visitor_ip: visitorIp,
       user_agent: userAgent,
       referer: referer,
-    }).then(({ error: pvError }) => {
-      if (pvError) console.error("Page view tracking error:", pvError);
+    }).then(async ({ data: insertData, error: pvError }) => {
+      if (pvError) {
+        console.error("Page view tracking error:", pvError);
+        return;
+      }
+      // Resolve country from IP (best-effort, don't fail)
+      if (visitorIp && visitorIp !== "unknown") {
+        try {
+          const geoRes = await fetch(`http://ip-api.com/json/${visitorIp}?fields=country`, { signal: AbortSignal.timeout(3000) });
+          if (geoRes.ok) {
+            const geo = await geoRes.json();
+            if (geo.country) {
+              await supabase.from("page_views")
+                .update({ country: geo.country })
+                .eq("website_id", website.id)
+                .eq("page_slug", slug)
+                .eq("visitor_ip", visitorIp)
+                .is("country", null)
+                .order("viewed_at", { ascending: false })
+                .limit(1);
+            }
+          }
+        } catch { /* ignore geo lookup failures */ }
+      }
     });
 
     return new Response(fullHtml, {
