@@ -35,6 +35,7 @@ const HeroSection = () => (
           Your Business Online{" "}
           <span className="text-gradient-hero">In Minutes</span>
         </motion.h1>
+        {/* Visual h1 — the semantic h1 is sr-only above */}
 
         <motion.p
           initial={{ opacity: 0, y: 20 }}
