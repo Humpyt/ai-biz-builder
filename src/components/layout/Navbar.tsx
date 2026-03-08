@@ -81,6 +81,9 @@ const Navbar = () => {
             </>
           ) : (
             <>
+              <Button variant="ghost" size="icon" onClick={() => setDark(!dark)} className="h-8 w-8">
+                {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </Button>
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/login">Log In</Link>
               </Button>
