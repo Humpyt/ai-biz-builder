@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Globe, LogOut, Menu, Shield } from "lucide-react";
+import { Globe, LogOut, Menu, Moon, Shield, Sun } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
@@ -11,12 +11,23 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const Navbar = () => {
   const { user, profile, signOut } = useAuth();
   const { isAdmin } = useAdminCheck();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [dark, setDark] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("theme") === "dark";
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+    localStorage.setItem("theme", dark ? "dark" : "light");
+  }, [dark]);
 
   const navLinks = (
     <>
@@ -61,12 +72,18 @@ const Navbar = () => {
                   {profile?.display_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || "U"}
                 </AvatarFallback>
               </Avatar>
+              <Button variant="ghost" size="icon" onClick={() => setDark(!dark)} className="h-8 w-8">
+                {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </Button>
               <Button variant="ghost" size="sm" onClick={signOut}>
                 <LogOut className="w-4 h-4" />
               </Button>
             </>
           ) : (
             <>
+              <Button variant="ghost" size="icon" onClick={() => setDark(!dark)} className="h-8 w-8">
+                {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </Button>
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/login">Log In</Link>
               </Button>
