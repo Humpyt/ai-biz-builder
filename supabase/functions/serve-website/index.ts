@@ -83,12 +83,15 @@ serve(async (req) => {
   <meta name="twitter:title" content="${seoTitle.replace(/"/g, '&quot;')}">
   <meta name="twitter:description" content="${seoDesc}">`;
 
+    // Chat widget code
+    const chatWidgetCode = buildChatWidget(website.id, website.name);
+
     let fullHtml: string;
 
     if (html.trim().toLowerCase().startsWith("<!doctype") || html.trim().toLowerCase().startsWith("<html")) {
       fullHtml = html
         .replace("</head>", `${seoMeta}\n<style>${css}</style></head>`)
-        .replace("</body>", `<script>${js}</script></body>`);
+        .replace("</body>", `<script>${js}</script>${chatWidgetCode}</body>`);
     } else {
       fullHtml = `<!DOCTYPE html>
 <html lang="en">
@@ -101,6 +104,7 @@ serve(async (req) => {
 <body>
 ${html}
 <script>${js}</script>
+${chatWidgetCode}
 </body>
 </html>`;
     }
