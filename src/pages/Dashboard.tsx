@@ -1,11 +1,22 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Globe, Plus, Eye, Pencil, RefreshCw, ExternalLink } from "lucide-react";
+import { Globe, Plus, Eye, Pencil, RefreshCw, ExternalLink, Trash2 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Website {
   id: string;
@@ -62,6 +73,16 @@ const Dashboard = () => {
           fetchWebsites();
         }
       }, 3000);
+    }
+  };
+
+  const handleDelete = async (websiteId: string) => {
+    const { error } = await supabase.from("websites").delete().eq("id", websiteId);
+    if (error) {
+      toast.error("Failed to delete website");
+    } else {
+      toast.success("Website deleted");
+      setWebsites((prev) => prev.filter((s) => s.id !== websiteId));
     }
   };
 
@@ -139,7 +160,7 @@ const Dashboard = () => {
                     </a>
                     <p className="text-xs text-muted-foreground mb-4">{site.industry}</p>
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       {site.status === "live" && (
                         <>
                           <Button variant="outline" size="sm" className="flex-1" asChild>
@@ -169,6 +190,30 @@ const Dashboard = () => {
                           <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Generating...
                         </Button>
                       )}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete "{site.name}"?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete this website and all its generated content. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              onClick={() => handleDelete(site.id)}
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 </div>
