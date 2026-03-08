@@ -65,6 +65,7 @@ const Editor = () => {
   const [phone, setPhone] = useState("");
   const [location, setLocation] = useState("");
   const [selectedModel, setSelectedModel] = useState("google/gemini-3-flash-preview");
+  const [customDomain, setCustomDomain] = useState("");
 
   useEffect(() => {
     if (!websiteId) {
