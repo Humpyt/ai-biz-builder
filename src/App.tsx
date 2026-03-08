@@ -44,6 +44,9 @@ const App = () => (
             <Route path="/editor" element={
               <ProtectedRoute><Editor /></ProtectedRoute>
             } />
+            <Route path="/payment" element={
+              <ProtectedRoute><Payment /></ProtectedRoute>
+            } />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
