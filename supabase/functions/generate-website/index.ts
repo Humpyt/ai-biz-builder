@@ -51,6 +51,54 @@ serve(async (req) => {
 
     if (fetchError || !website) throw new Error("Website not found");
 
+    // ── Subscription enforcement ──
+    const planLimits: Record<string, number> = {
+      free: 1,
+      starter: 1,
+      business: 5,
+      enterprise: Infinity,
+    };
+
+    // Get user's active subscription
+    const { data: sub } = await supabase
+      .from("subscriptions")
+      .select("plan, status, expires_at")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const currentPlan = sub?.plan || "free";
+    const limit = planLimits[currentPlan] ?? 1;
+
+    // Check if subscription is expired
+    if (sub?.expires_at && new Date(sub.expires_at) < new Date()) {
+      await supabase.from("websites").update({ status: "failed" }).eq("id", websiteId);
+      return new Response(
+        JSON.stringify({ error: "Your subscription has expired. Please renew to generate websites." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Count existing websites (exclude current one being generated)
+    const { count } = await supabase
+      .from("websites")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .neq("id", websiteId)
+      .in("status", ["live", "generating"]);
+
+    if ((count ?? 0) >= limit) {
+      await supabase.from("websites").delete().eq("id", websiteId);
+      return new Response(
+        JSON.stringify({
+          error: `Your ${currentPlan} plan allows ${limit} website${limit > 1 ? "s" : ""}. Please upgrade to create more.`,
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Update status to generating
     await supabase
       .from("websites")
