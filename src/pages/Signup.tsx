@@ -2,18 +2,20 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Globe, Loader2 } from "lucide-react";
+import { Globe, Loader2, CheckCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const Login = () => {
+const Signup = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
@@ -27,26 +29,36 @@ const Login = () => {
     });
     if (result.error) {
       toast.error("Google sign in failed. Please try again.");
-      console.error("OAuth error:", result.error);
     }
   };
 
-  const handleEmailSignIn = async (e: React.FormEvent) => {
+  const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
     setSubmitting(true);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: window.location.origin,
+        data: {
+          full_name: displayName,
+        },
+      },
+    });
 
     if (error) {
-      if (error.message.includes("Email not confirmed")) {
-        toast.error("Please verify your email before signing in. Check your inbox.");
-      } else if (error.message.includes("Invalid login credentials")) {
-        toast.error("Invalid email or password.");
+      if (error.message.includes("already registered")) {
+        toast.error("An account with this email already exists. Try signing in.");
       } else {
         toast.error(error.message);
       }
+      setSubmitting(false);
+      return;
     }
+
+    setEmailSent(true);
     setSubmitting(false);
   };
 
@@ -54,6 +66,27 @@ const Login = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/30">
         <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (emailSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4">
+        <div className="w-full max-w-sm">
+          <div className="bg-card rounded-2xl shadow-card p-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-8 h-8 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Check your email</h2>
+            <p className="text-muted-foreground mb-6">
+              We've sent a verification link to <strong>{email}</strong>. Click the link to activate your account.
+            </p>
+            <Button variant="outline" asChild className="w-full">
+              <Link to="/login">Back to Sign In</Link>
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -66,12 +99,11 @@ const Login = () => {
             <Globe className="w-8 h-8 text-secondary" />
             <span className="font-display font-bold text-2xl">UgBiz</span>
           </div>
-          <h1 className="text-2xl font-bold mb-2">Welcome back</h1>
-          <p className="text-muted-foreground">Sign in to manage your websites</p>
+          <h1 className="text-2xl font-bold mb-2">Create your account</h1>
+          <p className="text-muted-foreground">Start building your website today</p>
         </div>
 
         <div className="bg-card rounded-2xl shadow-card p-8 space-y-6">
-          {/* Google OAuth */}
           <Button
             onClick={handleGoogleSignIn}
             variant="outline"
@@ -86,18 +118,24 @@ const Login = () => {
             Continue with Google
           </Button>
 
-          {/* Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">Or continue with email</span>
+              <span className="bg-card px-2 text-muted-foreground">Or sign up with email</span>
             </div>
           </div>
 
-          {/* Email/Password form */}
-          <form onSubmit={handleEmailSignIn} className="space-y-4">
+          <form onSubmit={handleEmailSignUp} className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Full Name</label>
+              <Input
+                placeholder="John Doe"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+              />
+            </div>
             <div>
               <label className="text-sm font-medium mb-1.5 block">Email</label>
               <Input
@@ -112,7 +150,7 @@ const Login = () => {
               <label className="text-sm font-medium mb-1.5 block">Password</label>
               <Input
                 type="password"
-                placeholder="••••••••"
+                placeholder="At least 6 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -120,14 +158,14 @@ const Login = () => {
               />
             </div>
             <Button type="submit" className="w-full h-11" disabled={submitting}>
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sign In"}
+              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Account"}
             </Button>
           </form>
 
           <p className="text-sm text-center text-muted-foreground">
-            Don't have an account?{" "}
-            <Link to="/signup" className="text-primary font-medium hover:underline">
-              Sign up
+            Already have an account?{" "}
+            <Link to="/login" className="text-primary font-medium hover:underline">
+              Sign in
             </Link>
           </p>
         </div>
@@ -136,4 +174,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Signup;
