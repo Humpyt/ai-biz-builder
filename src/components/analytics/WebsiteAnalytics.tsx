@@ -11,6 +11,7 @@ interface PageView {
   page_slug: string;
   viewed_at: string;
   referer: string | null;
+  country: string | null;
 }
 
 interface Website {
