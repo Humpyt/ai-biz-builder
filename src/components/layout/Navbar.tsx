@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Globe, LogOut, Menu, Shield } from "lucide-react";
+import { Globe, LogOut, Menu, Moon, Shield, Sun } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
