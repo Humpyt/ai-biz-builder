@@ -264,13 +264,16 @@ const Editor = () => {
     pollForCompletion();
   };
 
-  const handleRegeneratePage = async (pageSlug: string) => {
+  const handleRegeneratePage = async (pageSlug: string, customPrompt?: string) => {
     if (!websiteId) return;
     setRegeneratingPage(pageSlug);
+    setPromptPopoverOpen(null);
+    setPagePrompt("");
 
-    const { error } = await supabase.functions.invoke("generate-website", {
-      body: { websiteId, model: selectedModel, pageSlug },
-    });
+    const body: Record<string, string> = { websiteId, model: selectedModel, pageSlug };
+    if (customPrompt?.trim()) body.customPrompt = customPrompt.trim();
+
+    const { error } = await supabase.functions.invoke("generate-website", { body });
 
     if (error) {
       toast.error(`Failed to regenerate ${pageSlug} page`);
