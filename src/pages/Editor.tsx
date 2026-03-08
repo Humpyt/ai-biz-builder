@@ -41,6 +41,7 @@ interface WebsiteData {
   generated_html: string | null;
   generated_css: string | null;
   generated_js: string | null;
+  custom_domain: string | null;
   status: string;
 }
 
