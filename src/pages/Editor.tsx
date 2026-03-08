@@ -202,6 +202,7 @@ const Editor = () => {
       color_scheme: colorScheme,
       contact_email: contactEmail,
       phone, location,
+      chat_widget_enabled: chatWidgetEnabled,
       custom_domain: customDomain || null,
     };
 
