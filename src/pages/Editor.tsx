@@ -3,12 +3,13 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, Sparkles, RefreshCw, Eye, EyeOff, Bot, Globe, Code, Pencil } from "lucide-react";
+import { ArrowLeft, Save, Sparkles, RefreshCw, Eye, EyeOff, Bot, Globe, Code, Pencil, History, FileText } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { format } from "date-fns";
 
 const aiModels = [
   { id: "google/gemini-3-flash-preview", name: "Gemini 3 Flash", desc: "Fast & balanced" },
@@ -46,6 +47,27 @@ interface WebsiteData {
   status: string;
 }
 
+interface PageData {
+  id: string;
+  slug: string;
+  title: string;
+  generated_html: string | null;
+  generated_css: string | null;
+  generated_js: string | null;
+  sort_order: number;
+}
+
+interface VersionData {
+  id: string;
+  version_number: number;
+  model_used: string | null;
+  created_at: string;
+  generated_html: string | null;
+  generated_css: string | null;
+  generated_js: string | null;
+  pages: any;
+}
+
 const Editor = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -56,6 +78,15 @@ const Editor = () => {
   const [regenerating, setRegenerating] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [editorTab, setEditorTab] = useState("form");
+
+  // Multi-page state
+  const [pages, setPages] = useState<PageData[]>([]);
+  const [activePage, setActivePage] = useState("index");
+
+  // Version history state
+  const [versions, setVersions] = useState<VersionData[]>([]);
+  const [showVersions, setShowVersions] = useState(false);
+  const [restoringVersion, setRestoringVersion] = useState(false);
 
   // Form fields
   const [name, setName] = useState("");
@@ -80,6 +111,8 @@ const Editor = () => {
       return;
     }
     fetchWebsite();
+    fetchPages();
+    fetchVersions();
   }, [websiteId]);
 
   const fetchWebsite = async () => {
@@ -112,27 +145,82 @@ const Editor = () => {
     setLoading(false);
   };
 
+  const fetchPages = async () => {
+    const { data } = await supabase
+      .from("website_pages")
+      .select("*")
+      .eq("website_id", websiteId!)
+      .order("sort_order");
+
+    if (data && data.length > 0) {
+      setPages(data as PageData[]);
+    }
+  };
+
+  const fetchVersions = async () => {
+    const { data } = await supabase
+      .from("website_versions")
+      .select("*")
+      .eq("website_id", websiteId!)
+      .order("version_number", { ascending: false });
+
+    if (data) {
+      setVersions(data as VersionData[]);
+    }
+  };
+
+  // When active page changes, update code editor
+  useEffect(() => {
+    if (pages.length === 0) return;
+    const page = pages.find((p) => p.slug === activePage);
+    if (page) {
+      setCodeHtml(page.generated_html || "");
+      setCodeCss(page.generated_css || "");
+      setCodeJs(page.generated_js || "");
+    } else if (activePage === "index" && website) {
+      setCodeHtml(website.generated_html || "");
+      setCodeCss(website.generated_css || "");
+      setCodeJs(website.generated_js || "");
+    }
+  }, [activePage, pages]);
+
   const handleSave = async () => {
     if (!websiteId) return;
     setSaving(true);
 
     const updateData: Record<string, unknown> = {
-      name,
-      description,
-      services,
+      name, description, services,
       target_audience: targetAudience,
       color_scheme: colorScheme,
       contact_email: contactEmail,
-      phone,
-      location,
+      phone, location,
       custom_domain: customDomain || null,
     };
 
-    // If on code tab, also save code changes
     if (editorTab === "code") {
-      updateData.generated_html = codeHtml;
-      updateData.generated_css = codeCss;
-      updateData.generated_js = codeJs;
+      // Save to the active page if multi-page, otherwise to website
+      const page = pages.find((p) => p.slug === activePage);
+      if (page) {
+        await supabase
+          .from("website_pages")
+          .update({
+            generated_html: codeHtml,
+            generated_css: codeCss,
+            generated_js: codeJs,
+          })
+          .eq("id", page.id);
+
+        // Also update main website if this is the index page
+        if (activePage === "index") {
+          updateData.generated_html = codeHtml;
+          updateData.generated_css = codeCss;
+          updateData.generated_js = codeJs;
+        }
+      } else {
+        updateData.generated_html = codeHtml;
+        updateData.generated_css = codeCss;
+        updateData.generated_js = codeJs;
+      }
     }
 
     const { error } = await supabase
@@ -144,7 +232,7 @@ const Editor = () => {
       toast.error("Failed to save changes");
     } else {
       toast.success("Changes saved!");
-      if (editorTab === "code") {
+      if (editorTab === "code" && activePage === "index") {
         setWebsite((prev) =>
           prev ? { ...prev, generated_html: codeHtml, generated_css: codeCss, generated_js: codeJs } : prev
         );
@@ -168,7 +256,7 @@ const Editor = () => {
       return;
     }
 
-    toast.info("Regenerating website with your changes...");
+    toast.info("Regenerating website with AI...");
 
     const poll = setInterval(async () => {
       const { data } = await supabase
@@ -188,7 +276,9 @@ const Editor = () => {
         setCodeHtml(data.generated_html || "");
         setCodeCss(data.generated_css || "");
         setCodeJs(data.generated_js || "");
-        toast.success("Website regenerated!");
+        fetchPages();
+        fetchVersions();
+        toast.success("Website regenerated with multi-page + images!");
       } else if (data?.status === "failed") {
         clearInterval(poll);
         setRegenerating(false);
@@ -197,11 +287,74 @@ const Editor = () => {
     }, 3000);
   };
 
+  const handleRestoreVersion = async (version: VersionData) => {
+    if (!websiteId) return;
+    setRestoringVersion(true);
+
+    try {
+      // Restore main website fields
+      await supabase
+        .from("websites")
+        .update({
+          generated_html: version.generated_html,
+          generated_css: version.generated_css,
+          generated_js: version.generated_js,
+        })
+        .eq("id", websiteId);
+
+      // Restore pages if version has them
+      if (version.pages && Array.isArray(version.pages)) {
+        await supabase.from("website_pages").delete().eq("website_id", websiteId);
+
+        const pageInserts = version.pages.map((p: any, i: number) => ({
+          website_id: websiteId,
+          slug: p.slug,
+          title: p.title,
+          generated_html: p.html,
+          generated_css: p.css,
+          generated_js: p.js,
+          sort_order: i,
+        }));
+
+        if (pageInserts.length > 0) {
+          await supabase.from("website_pages").insert(pageInserts);
+        }
+      }
+
+      // Refresh state
+      setWebsite((prev) =>
+        prev
+          ? { ...prev, generated_html: version.generated_html, generated_css: version.generated_css, generated_js: version.generated_js }
+          : prev
+      );
+      setCodeHtml(version.generated_html || "");
+      setCodeCss(version.generated_css || "");
+      setCodeJs(version.generated_js || "");
+      fetchPages();
+
+      toast.success(`Restored to version ${version.version_number}`);
+      setShowVersions(false);
+    } catch (e) {
+      toast.error("Failed to restore version");
+    }
+
+    setRestoringVersion(false);
+  };
+
   const previewSrc = (() => {
-    // Use code editor values if on code tab, otherwise website values
-    const h = editorTab === "code" ? codeHtml : (website?.generated_html || "");
-    const c = editorTab === "code" ? codeCss : (website?.generated_css || "");
-    const j = editorTab === "code" ? codeJs : (website?.generated_js || "");
+    const h = editorTab === "code" ? codeHtml : (() => {
+      const page = pages.find((p) => p.slug === activePage);
+      return page?.generated_html || website?.generated_html || "";
+    })();
+    const c = editorTab === "code" ? codeCss : (() => {
+      const page = pages.find((p) => p.slug === activePage);
+      return page?.generated_css || website?.generated_css || "";
+    })();
+    const j = editorTab === "code" ? codeJs : (() => {
+      const page = pages.find((p) => p.slug === activePage);
+      return page?.generated_js || website?.generated_js || "";
+    })();
+
     if (h.trim().toLowerCase().startsWith("<!doctype") || h.trim().toLowerCase().startsWith("<html")) {
       return h
         .replace("</head>", `<style>${c}</style></head>`)
@@ -234,6 +387,14 @@ const Editor = () => {
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => setShowVersions(!showVersions)}
+          >
+            <History className="w-4 h-4" />
+            <span className="hidden md:inline">Versions</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setShowPreview(!showPreview)}
             className="hidden md:flex"
           >
@@ -254,10 +415,30 @@ const Editor = () => {
         </div>
       </div>
 
+      {/* Page tabs (multi-page navigation) */}
+      {pages.length > 1 && (
+        <div className="bg-card border-b px-4 py-2 flex items-center gap-1 overflow-x-auto">
+          <FileText className="w-4 h-4 text-muted-foreground mr-2 flex-shrink-0" />
+          {pages.map((page) => (
+            <button
+              key={page.slug}
+              onClick={() => setActivePage(page.slug)}
+              className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors whitespace-nowrap ${
+                activePage === page.slug
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {page.title}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Main content */}
       <div className="flex-1 flex">
         {/* Form/Code panel */}
-        <div className={`${showPreview ? "w-[420px]" : "w-full max-w-2xl mx-auto"} border-r bg-card overflow-y-auto`}>
+        <div className={`${showPreview ? "w-[420px]" : "w-full max-w-2xl mx-auto"} border-r bg-card overflow-y-auto flex flex-col`}>
           <Tabs value={editorTab} onValueChange={setEditorTab} className="h-full flex flex-col">
             <TabsList className="mx-4 mt-4 mb-2">
               <TabsTrigger value="form" className="flex items-center gap-1.5">
@@ -352,7 +533,9 @@ const Editor = () => {
 
             <TabsContent value="code" className="flex-1 overflow-y-auto p-4 space-y-4 mt-0">
               <div>
-                <h2 className="text-lg font-semibold mb-1">Code Editor</h2>
+                <h2 className="text-lg font-semibold mb-1">
+                  Code Editor {pages.length > 1 && <span className="text-muted-foreground font-normal text-sm">— {pages.find(p => p.slug === activePage)?.title || "Home"}</span>}
+                </h2>
                 <p className="text-sm text-muted-foreground">Edit HTML, CSS, and JS directly. Changes preview live.</p>
               </div>
 
@@ -404,6 +587,54 @@ const Editor = () => {
               title={`Preview of ${name}`}
               sandbox="allow-scripts"
             />
+          </div>
+        )}
+
+        {/* Version history panel */}
+        {showVersions && (
+          <div className="w-[300px] border-l bg-card overflow-y-auto p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold flex items-center gap-2">
+                <History className="w-4 h-4" /> Version History
+              </h3>
+              <Button variant="ghost" size="sm" onClick={() => setShowVersions(false)}>✕</Button>
+            </div>
+
+            {versions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No versions yet. Generate your website to create the first version.</p>
+            ) : (
+              <div className="space-y-3">
+                {versions.map((v) => (
+                  <div key={v.id} className="border rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm">Version {v.version_number}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(v.created_at), "MMM d, HH:mm")}
+                      </span>
+                    </div>
+                    {v.model_used && (
+                      <p className="text-xs text-muted-foreground">
+                        Model: {v.model_used.split("/").pop()}
+                      </p>
+                    )}
+                    {v.pages && Array.isArray(v.pages) && (
+                      <p className="text-xs text-muted-foreground">
+                        {v.pages.length} page{v.pages.length > 1 ? "s" : ""}
+                      </p>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      disabled={restoringVersion}
+                      onClick={() => handleRestoreVersion(v)}
+                    >
+                      <RefreshCw className="w-3 h-3" /> Restore
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
