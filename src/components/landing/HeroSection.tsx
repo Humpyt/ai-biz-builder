@@ -26,16 +26,17 @@ const HeroSection = () => (
           </span>
         </motion.div>
 
-        <motion.h1
+        <motion.p
+          role="presentation"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1 }}
           className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-[1.1]"
+          aria-hidden="true"
         >
           Your Business Online{" "}
           <span className="text-gradient-hero">In Minutes</span>
-        </motion.h1>
-        {/* Visual h1 — the semantic h1 is sr-only above */}
+        </motion.p>
 
         <motion.p
           initial={{ opacity: 0, y: 20 }}
