@@ -4,7 +4,8 @@ import { ArrowRight, Globe, Sparkles, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const HeroSection = () => (
-  <section className="relative min-h-[90vh] flex items-center overflow-hidden">
+  <section className="relative min-h-[90vh] flex items-center overflow-hidden" aria-label="Hero">
+    <h1 className="sr-only">UgBiz — AI-Powered Website Builder for Ugandan Businesses</h1>
     {/* Background decoration */}
     <div className="absolute inset-0 overflow-hidden">
       <div className="absolute top-20 -right-20 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
