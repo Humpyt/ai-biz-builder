@@ -76,6 +76,16 @@ const Dashboard = () => {
     }
   };
 
+  const handleDelete = async (websiteId: string) => {
+    const { error } = await supabase.from("websites").delete().eq("id", websiteId);
+    if (error) {
+      toast.error("Failed to delete website");
+    } else {
+      toast.success("Website deleted");
+      setWebsites((prev) => prev.filter((s) => s.id !== websiteId));
+    }
+  };
+
   const statusStyles = (status: string) => {
     switch (status) {
       case "live":
