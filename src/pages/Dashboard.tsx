@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Globe, Plus, Eye, Pencil, RefreshCw, ExternalLink, Trash2 } from "lucide-react";
+import { Globe, Plus, Eye, Pencil, RefreshCw, ExternalLink, Trash2, CreditCard, CalendarClock } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,9 +28,16 @@ interface Website {
   created_at: string;
 }
 
+interface Subscription {
+  plan: string;
+  status: string;
+  expires_at: string | null;
+}
+
 const Dashboard = () => {
   const { user } = useAuth();
   const [websites, setWebsites] = useState<Website[]>([]);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchWebsites = async () => {
@@ -48,8 +56,20 @@ const Dashboard = () => {
     setLoading(false);
   };
 
+  const fetchSubscription = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("subscriptions")
+      .select("plan, status, expires_at")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    setSubscription(data);
+  };
+
   useEffect(() => {
     fetchWebsites();
+    fetchSubscription();
   }, [user]);
 
   const handleRegenerate = async (websiteId: string) => {
@@ -114,6 +134,37 @@ const Dashboard = () => {
                 <Plus className="w-4 h-4" /> New Website
               </Link>
             </Button>
+          </div>
+
+          {/* Subscription status */}
+          <div className="bg-card rounded-xl shadow-card p-5 mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <CreditCard className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Current Plan</p>
+                <p className="font-semibold capitalize">{subscription?.plan || "Free"}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CalendarClock className="w-4 h-4" />
+                {subscription?.expires_at
+                  ? `Expires ${format(new Date(subscription.expires_at), "MMM d, yyyy")}`
+                  : "No expiry"}
+              </div>
+              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                subscription?.status === "active"
+                  ? "bg-primary/10 text-primary"
+                  : "bg-muted text-muted-foreground"
+              }`}>
+                {subscription?.status || "active"}
+              </span>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/pricing">Upgrade</Link>
+              </Button>
+            </div>
           </div>
 
           {loading ? (
