@@ -78,6 +78,8 @@ const Editor = () => {
   const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [regeneratingPage, setRegeneratingPage] = useState<string | null>(null);
+  const [pagePrompt, setPagePrompt] = useState("");
+  const [promptPopoverOpen, setPromptPopoverOpen] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(true);
   const [editorTab, setEditorTab] = useState("form");
 
