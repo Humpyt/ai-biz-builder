@@ -32,7 +32,18 @@ serve(async (req) => {
       );
     }
 
-    const fullHtml = `<!DOCTYPE html>
+    // If generated_html is a full document, serve it directly with CSS/JS injected
+    let fullHtml: string;
+    const html = website.generated_html || "";
+    
+    if (html.trim().toLowerCase().startsWith("<!doctype") || html.trim().toLowerCase().startsWith("<html")) {
+      // Full document — inject CSS and JS into it
+      fullHtml = html
+        .replace("</head>", `<style>${website.generated_css || ""}</style></head>`)
+        .replace("</body>", `<script>${website.generated_js || ""}</script></body>`);
+    } else {
+      // Partial HTML — wrap it
+      fullHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -41,10 +52,11 @@ serve(async (req) => {
   <style>${website.generated_css || ""}</style>
 </head>
 <body>
-${website.generated_html || ""}
+${html}
 <script>${website.generated_js || ""}</script>
 </body>
 </html>`;
+    }
 
     return new Response(fullHtml, {
       status: 200,
