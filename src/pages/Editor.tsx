@@ -63,6 +63,7 @@ const Editor = () => {
   const [contactEmail, setContactEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [location, setLocation] = useState("");
+  const [selectedModel, setSelectedModel] = useState("google/gemini-3-flash-preview");
 
   useEffect(() => {
     if (!websiteId) {
