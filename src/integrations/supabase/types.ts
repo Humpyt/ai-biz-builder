@@ -104,6 +104,97 @@ export type Database = {
         }
         Relationships: []
       }
+      website_pages: {
+        Row: {
+          created_at: string
+          generated_css: string | null
+          generated_html: string | null
+          generated_js: string | null
+          id: string
+          slug: string
+          sort_order: number
+          title: string
+          updated_at: string
+          website_id: string
+        }
+        Insert: {
+          created_at?: string
+          generated_css?: string | null
+          generated_html?: string | null
+          generated_js?: string | null
+          id?: string
+          slug?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          website_id: string
+        }
+        Update: {
+          created_at?: string
+          generated_css?: string | null
+          generated_html?: string | null
+          generated_js?: string | null
+          id?: string
+          slug?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          website_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_pages_website_id_fkey"
+            columns: ["website_id"]
+            isOneToOne: false
+            referencedRelation: "websites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      website_versions: {
+        Row: {
+          created_at: string
+          generated_css: string | null
+          generated_html: string | null
+          generated_js: string | null
+          id: string
+          model_used: string | null
+          pages: Json | null
+          version_number: number
+          website_id: string
+        }
+        Insert: {
+          created_at?: string
+          generated_css?: string | null
+          generated_html?: string | null
+          generated_js?: string | null
+          id?: string
+          model_used?: string | null
+          pages?: Json | null
+          version_number?: number
+          website_id: string
+        }
+        Update: {
+          created_at?: string
+          generated_css?: string | null
+          generated_html?: string | null
+          generated_js?: string | null
+          id?: string
+          model_used?: string | null
+          pages?: Json | null
+          version_number?: number
+          website_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_versions_website_id_fkey"
+            columns: ["website_id"]
+            isOneToOne: false
+            referencedRelation: "websites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       websites: {
         Row: {
           color_scheme: string | null
