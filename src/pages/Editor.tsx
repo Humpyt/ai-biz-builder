@@ -76,6 +76,7 @@ const Editor = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [regeneratingPage, setRegeneratingPage] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(true);
   const [editorTab, setEditorTab] = useState("form");
 
@@ -257,31 +258,51 @@ const Editor = () => {
     }
 
     toast.info("Regenerating website with AI...");
+    pollForCompletion();
+  };
 
+  const handleRegeneratePage = async (pageSlug: string) => {
+    if (!websiteId) return;
+    setRegeneratingPage(pageSlug);
+
+    const { error } = await supabase.functions.invoke("generate-website", {
+      body: { websiteId, model: selectedModel, pageSlug },
+    });
+
+    if (error) {
+      toast.error(`Failed to regenerate ${pageSlug} page`);
+      setRegeneratingPage(null);
+      return;
+    }
+
+    toast.info(`Regenerating ${pageSlug} page...`);
+    pollForCompletion(pageSlug);
+  };
+
+  const pollForCompletion = (pageSlug?: string) => {
     const poll = setInterval(async () => {
       const { data } = await supabase
         .from("websites")
         .select("status, generated_html, generated_css, generated_js")
-        .eq("id", websiteId)
+        .eq("id", websiteId!)
         .single();
 
       if (data?.status === "live") {
         clearInterval(poll);
         setRegenerating(false);
+        setRegeneratingPage(null);
         setWebsite((prev) =>
           prev
             ? { ...prev, generated_html: data.generated_html, generated_css: data.generated_css, generated_js: data.generated_js, status: "live" }
             : prev
         );
-        setCodeHtml(data.generated_html || "");
-        setCodeCss(data.generated_css || "");
-        setCodeJs(data.generated_js || "");
         fetchPages();
         fetchVersions();
-        toast.success("Website regenerated with multi-page + images!");
+        toast.success(pageSlug ? `${pageSlug} page regenerated!` : "Website regenerated!");
       } else if (data?.status === "failed") {
         clearInterval(poll);
         setRegenerating(false);
+        setRegeneratingPage(null);
         toast.error("Regeneration failed. Try again.");
       }
     }, 3000);
@@ -420,17 +441,37 @@ const Editor = () => {
         <div className="bg-card border-b px-4 py-2 flex items-center gap-1 overflow-x-auto">
           <FileText className="w-4 h-4 text-muted-foreground mr-2 flex-shrink-0" />
           {pages.map((page) => (
-            <button
-              key={page.slug}
-              onClick={() => setActivePage(page.slug)}
-              className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors whitespace-nowrap ${
-                activePage === page.slug
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted"
-              }`}
-            >
-              {page.title}
-            </button>
+            <div key={page.slug} className="flex items-center gap-0.5">
+              <button
+                onClick={() => setActivePage(page.slug)}
+                className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors whitespace-nowrap ${
+                  activePage === page.slug
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                {page.title}
+              </button>
+              {activePage === page.slug && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 flex-shrink-0"
+                  disabled={regeneratingPage === page.slug || regenerating}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRegeneratePage(page.slug);
+                  }}
+                  title={`Regenerate ${page.title}`}
+                >
+                  {regeneratingPage === page.slug ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  )}
+                </Button>
+              )}
+            </div>
           ))}
         </div>
       )}
