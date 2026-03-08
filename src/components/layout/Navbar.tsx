@@ -18,6 +18,7 @@ const Navbar = () => {
   const { user, profile, signOut } = useAuth();
   const { isAdmin } = useAdminCheck();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { theme, setTheme } = useTheme();
 
   const navLinks = (
     <>
