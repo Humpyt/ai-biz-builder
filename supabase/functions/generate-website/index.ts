@@ -162,7 +162,7 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) throw new Error("Unauthorized");
 
-    const { websiteId, model } = await req.json();
+    const { websiteId, model, pageSlug } = await req.json();
     if (!websiteId) throw new Error("Missing websiteId");
 
     const allowedModels = [
