@@ -94,6 +94,18 @@ export default function WebsiteAnalytics({ websites }: { websites: Website[] }) 
       .slice(0, 5);
   }, [views]);
 
+  const countryBreakdown = useMemo(() => {
+    const counts: Record<string, number> = {};
+    views.forEach((v) => {
+      const country = v.country || "Unknown";
+      counts[country] = (counts[country] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+  }, [views]);
+
   const totalViews = views.length;
   const uniquePages = new Set(views.map((v) => v.page_slug)).size;
 
