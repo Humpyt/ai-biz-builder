@@ -107,7 +107,9 @@ const PricingSection = () => (
               className="w-full"
               asChild
             >
-              <Link to="/onboarding">{plan.cta}</Link>
+              <Link to={plan.price === "Free" ? "/onboarding" : `/payment?plan=${plan.name.toLowerCase()}`}>
+                {plan.cta}
+              </Link>
             </Button>
           </motion.div>
         ))}
