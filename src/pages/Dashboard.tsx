@@ -186,6 +186,9 @@ const Dashboard = () => {
             </div>
           </div>
 
+          {/* Analytics */}
+          <WebsiteAnalytics websites={websites.filter(w => w.status === "live").map(w => ({ id: w.id, name: w.name }))} />
+
           {/* Search & Filter */}
           {websites.length > 0 && (
             <div className="flex items-center gap-3 mb-6">
