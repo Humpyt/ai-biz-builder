@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Save, Sparkles, RefreshCw, Eye, EyeOff, Bot } from "lucide-react";
+import { ArrowLeft, Save, Sparkles, RefreshCw, Eye, EyeOff, Bot, Globe } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -41,6 +41,7 @@ interface WebsiteData {
   generated_html: string | null;
   generated_css: string | null;
   generated_js: string | null;
+  custom_domain: string | null;
   status: string;
 }
 
@@ -64,6 +65,7 @@ const Editor = () => {
   const [phone, setPhone] = useState("");
   const [location, setLocation] = useState("");
   const [selectedModel, setSelectedModel] = useState("google/gemini-3-flash-preview");
+  const [customDomain, setCustomDomain] = useState("");
 
   useEffect(() => {
     if (!websiteId) {
@@ -95,6 +97,7 @@ const Editor = () => {
     setContactEmail(data.contact_email || "");
     setPhone(data.phone || "");
     setLocation(data.location || "");
+    setCustomDomain((data as WebsiteData).custom_domain || "");
     setLoading(false);
   };
 
@@ -113,7 +116,8 @@ const Editor = () => {
         contact_email: contactEmail,
         phone,
         location,
-      })
+        custom_domain: customDomain || null,
+      } as any)
       .eq("id", websiteId);
 
     if (error) {
@@ -330,6 +334,21 @@ const Editor = () => {
             <div>
               <label className="text-sm font-medium mb-1.5 block">Location</label>
               <Input value={location} onChange={(e) => setLocation(e.target.value)} />
+            </div>
+
+            {/* Custom Domain */}
+            <div className="pt-4 border-t">
+              <label className="text-sm font-medium mb-1.5 flex items-center gap-1.5">
+                <Globe className="w-4 h-4" /> Custom Domain
+              </label>
+              <Input
+                value={customDomain}
+                onChange={(e) => setCustomDomain(e.target.value)}
+                placeholder="e.g. www.mybusiness.com"
+              />
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Save your desired domain. Public hosting coming soon.
+              </p>
             </div>
           </div>
         </div>

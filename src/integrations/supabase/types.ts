@@ -46,6 +46,7 @@ export type Database = {
           color_scheme: string | null
           contact_email: string | null
           created_at: string
+          custom_domain: string | null
           description: string | null
           generated_css: string | null
           generated_html: string | null
@@ -66,6 +67,7 @@ export type Database = {
           color_scheme?: string | null
           contact_email?: string | null
           created_at?: string
+          custom_domain?: string | null
           description?: string | null
           generated_css?: string | null
           generated_html?: string | null
@@ -86,6 +88,7 @@ export type Database = {
           color_scheme?: string | null
           contact_email?: string | null
           created_at?: string
+          custom_domain?: string | null
           description?: string | null
           generated_css?: string | null
           generated_html?: string | null
