@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Globe, Plus, Eye, Pencil, RefreshCw, ExternalLink, Trash2, CreditCard, CalendarClock } from "lucide-react";
+import { Globe, Plus, Eye, Pencil, RefreshCw, ExternalLink, Trash2, CreditCard, CalendarClock, User } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
+import ProfileEditor from "@/components/ProfileEditor";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -134,6 +135,15 @@ const Dashboard = () => {
                 <Plus className="w-4 h-4" /> New Website
               </Link>
             </Button>
+          </div>
+
+          {/* Profile section */}
+          <div className="bg-card rounded-xl shadow-card p-5 mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <User className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-muted-foreground">Profile</span>
+            </div>
+            <ProfileEditor />
           </div>
 
           {/* Subscription status */}
