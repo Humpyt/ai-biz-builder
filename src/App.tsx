@@ -40,6 +40,9 @@ const App = () => (
             <Route path="/preview" element={
               <ProtectedRoute><Preview /></ProtectedRoute>
             } />
+            <Route path="/editor" element={
+              <ProtectedRoute><Editor /></ProtectedRoute>
+            } />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
