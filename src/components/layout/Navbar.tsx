@@ -72,6 +72,9 @@ const Navbar = () => {
                   {profile?.display_name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || "U"}
                 </AvatarFallback>
               </Avatar>
+              <Button variant="ghost" size="icon" onClick={() => setDark(!dark)} className="h-8 w-8">
+                {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </Button>
               <Button variant="ghost" size="sm" onClick={signOut}>
                 <LogOut className="w-4 h-4" />
               </Button>
