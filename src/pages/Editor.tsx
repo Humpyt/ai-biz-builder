@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const aiModels = [
   { id: "google/gemini-3-flash-preview", name: "Gemini 3 Flash", desc: "Fast & balanced" },
