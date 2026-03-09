@@ -4,6 +4,10 @@
 
 **URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
 
+## Handover
+
+Deployment and takeover instructions for the next developer are in [HANDOVER.md](./HANDOVER.md).
+
 ## How can I edit this code?
 
 There are several ways of editing your application.
