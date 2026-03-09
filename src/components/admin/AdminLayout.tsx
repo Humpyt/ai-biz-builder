@@ -1,5 +1,6 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "./AdminSidebar";
+import { AdminNotifications } from "./AdminNotifications";
 
 export function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
