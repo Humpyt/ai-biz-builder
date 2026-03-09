@@ -593,7 +593,7 @@ const Editor = () => {
                       {aiModels.map((m) => (
                         <SelectItem key={m.id} value={m.id}>
                           <span className="font-medium">{m.name}</span>
-                          <span className="text-muted-foreground ml-2 text-xs">— {m.desc}</span>
+                          <span className="text-muted-foreground ml-2 text-xs">- {m.desc}</span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -637,7 +637,7 @@ const Editor = () => {
             <TabsContent value="code" className="flex-1 overflow-y-auto p-4 space-y-4 mt-0">
               <div>
                 <h2 className="text-lg font-semibold mb-1">
-                  Code Editor {pages.length > 1 && <span className="text-muted-foreground font-normal text-sm">— {pages.find(p => p.slug === activePage)?.title || "Home"}</span>}
+                  Code Editor {pages.length > 1 && <span className="text-muted-foreground font-normal text-sm">- {pages.find(p => p.slug === activePage)?.title || "Home"}</span>}
                 </h2>
                 <p className="text-sm text-muted-foreground">Edit HTML, CSS, and JS directly. Changes preview live.</p>
               </div>
@@ -700,7 +700,7 @@ const Editor = () => {
               <h3 className="font-semibold flex items-center gap-2">
                 <History className="w-4 h-4" /> Version History
               </h3>
-              <Button variant="ghost" size="sm" onClick={() => setShowVersions(false)}>✕</Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowVersions(false)}>Close</Button>
             </div>
 
             {versions.length === 0 ? (

@@ -96,7 +96,7 @@ const AdminOverview = () => {
         ...subs.map((s) => ({
           type: "subscription" as const,
           label: `${s.plan} subscription`,
-          detail: `${s.status} — UGX ${s.amount.toLocaleString()}`,
+          detail: `${s.status} - UGX ${s.amount.toLocaleString()}`,
           time: s.created_at,
         })),
       ]

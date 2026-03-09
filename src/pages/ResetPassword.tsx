@@ -123,7 +123,7 @@ const ResetPassword = () => {
                 <label className="text-sm font-medium mb-1.5 block">New Password</label>
                 <Input
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="********"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -134,7 +134,7 @@ const ResetPassword = () => {
                 <label className="text-sm font-medium mb-1.5 block">Confirm Password</label>
                 <Input
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="********"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required

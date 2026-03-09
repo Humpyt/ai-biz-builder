@@ -15,7 +15,7 @@ const Footer = () => (
           <Link to="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
         </div>
         <p className="text-sm text-muted-foreground">
-          © 2026 UgBiz. All rights reserved.
+          (c) 2026 UgBiz. All rights reserved.
         </p>
       </div>
     </div>

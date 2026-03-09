@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
 import { Link } from "react-router-dom";
+import { sitesDomain } from "@/lib/domains";
 
 const plans = [
   {
@@ -11,7 +12,7 @@ const plans = [
     description: "Try out UgBiz with basic features",
     features: [
       "1 AI-generated website",
-      "yourname.ugbiz.com subdomain",
+      `yourname.${sitesDomain} subdomain`,
       "Basic templates",
       "Community support",
     ],

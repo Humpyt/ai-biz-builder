@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Trash2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { getPublicSiteHost, getPublicSiteUrl } from "@/lib/domains";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
@@ -93,12 +94,12 @@ const AdminWebsites = () => {
                     <TableCell className="font-medium">{w.name}</TableCell>
                     <TableCell>
                       <a
-                        href={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-website?subdomain=${w.subdomain}`}
+                        href={getPublicSiteUrl(w.subdomain)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-primary hover:underline flex items-center gap-1 text-sm"
                       >
-                        {w.subdomain} <ExternalLink className="w-3 h-3" />
+                        {getPublicSiteHost(w.subdomain)} <ExternalLink className="w-3 h-3" />
                       </a>
                     </TableCell>
                     <TableCell>{w.industry}</TableCell>

@@ -192,7 +192,7 @@ const AdminUsers = () => {
                           <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         )}
                       </TableCell>
-                      <TableCell className="font-medium">{p.display_name || "—"}</TableCell>
+                      <TableCell className="font-medium">{p.display_name || "-"}</TableCell>
                       <TableCell className="text-xs text-muted-foreground font-mono">
                         {p.user_id.slice(0, 8)}...
                       </TableCell>
@@ -270,7 +270,7 @@ const AdminUsers = () => {
                                         </div>
                                         <p className="text-xs text-muted-foreground">
                                           {s.currency} {s.amount.toLocaleString()}
-                                          {s.expires_at && ` · Exp: ${format(new Date(s.expires_at), "MMM d, yyyy")}`}
+                                          {s.expires_at && ` | Exp: ${format(new Date(s.expires_at), "MMM d, yyyy")}`}
                                         </p>
                                       </div>
                                     ))
@@ -297,7 +297,7 @@ const AdminUsers = () => {
                                             onClick={(e) => { e.stopPropagation(); handleRemoveRole(r.id); }}
                                             className="ml-1 text-destructive hover:text-destructive/80 font-bold"
                                           >
-                                            ×
+                                            x
                                           </button>
                                         </Badge>
                                       ))

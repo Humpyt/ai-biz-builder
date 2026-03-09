@@ -2,10 +2,11 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Globe, Sparkles, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
+import { sitesDomain } from "@/lib/domains";
 
 const HeroSection = () => (
   <section className="relative min-h-[90vh] flex items-center overflow-hidden" aria-label="Hero">
-    <h1 className="sr-only">UgBiz — AI-Powered Website Builder for Ugandan Businesses</h1>
+    <h1 className="sr-only">UgBiz - AI-Powered Website Builder for Ugandan Businesses</h1>
     {/* Background decoration */}
     <div className="absolute inset-0 overflow-hidden">
       <div className="absolute top-20 -right-20 w-96 h-96 bg-accent/10 rounded-full blur-3xl" />
@@ -45,7 +46,7 @@ const HeroSection = () => (
           className="text-lg md:text-xl text-muted-foreground mb-10 max-w-xl mx-auto"
         >
           Describe your business and let AI create a stunning website for you.
-          No coding needed. Get your own subdomain on ugbiz.com.
+          No coding needed. Get your own subdomain on {sitesDomain}.
         </motion.p>
 
         <motion.div

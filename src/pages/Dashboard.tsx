@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import WebsiteAnalytics from "@/components/analytics/WebsiteAnalytics";
+import { getPublicSiteHost, getPublicSiteUrl } from "@/lib/domains";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -253,12 +254,12 @@ const Dashboard = () => {
                     <h3 className="font-semibold text-lg mb-1">{site.name}</h3>
 
                     <a
-                      href={`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/serve-website?subdomain=${site.subdomain}`}
+                      href={getPublicSiteUrl(site.subdomain)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-sm text-primary hover:underline flex items-center gap-1 mb-1"
                     >
-                      {site.subdomain}.ugbiz.com <ExternalLink className="w-3 h-3" />
+                      {getPublicSiteHost(site.subdomain)} <ExternalLink className="w-3 h-3" />
                     </a>
                     <p className="text-xs text-muted-foreground mb-1">{site.industry}</p>
                     <p className="text-xs text-muted-foreground mb-4">

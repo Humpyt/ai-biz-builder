@@ -7,7 +7,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// ── helpers ──
+// Helpers
 
 async function callAI(apiKey: string, model: string, messages: any[], tools?: any[], toolChoice?: any) {
   const controller = new AbortController();
@@ -95,7 +95,7 @@ async function uploadBase64Image(
   }
 }
 
-// ── tool schema for structured output ──
+// Tool schema for structured output
 
 const websiteToolSchema = {
   type: "function",
@@ -184,7 +184,7 @@ serve(async (req) => {
 
     if (fetchError || !website) throw new Error("Website not found");
 
-    // ── Subscription enforcement ──
+    // Subscription enforcement
     const planLimits: Record<string, number> = { free: 1, starter: 1, business: 5, enterprise: Infinity };
 
     const { data: sub } = await supabase
@@ -222,7 +222,7 @@ serve(async (req) => {
       );
     }
 
-    // ── SINGLE PAGE REGENERATION ──
+    // Single page regeneration
     if (pageSlug) {
       // Fetch the existing page
       const { data: existingPage } = await supabase
@@ -383,11 +383,11 @@ Make it fresh, modern, and reflect the ${website.industry} industry.${customProm
       );
     }
 
-    // ── FULL SITE REGENERATION (existing logic) ──
+    // Full site regeneration
     // Update status to generating
     await supabase.from("websites").update({ status: "generating" }).eq("id", websiteId);
 
-    // ── AI prompt ──
+    // AI prompt
     const systemPrompt = `You are an expert web developer. Generate a complete, modern, multi-page responsive website for a business.
 
 Pages to generate: Home (slug: "index"), About (slug: "about"), Services (slug: "services"), Contact (slug: "contact").
@@ -474,7 +474,7 @@ Make it reflect the ${website.industry} industry with appropriate tone and profe
       }
     }
 
-    // ── Generate images and replace placeholders ──
+    // Generate images and replace placeholders
     const imagePrompts = parsed.image_prompts || [];
     const imageMap: Record<string, string> = {};
 
@@ -510,7 +510,7 @@ Make it reflect the ${website.industry} industry with appropriate tone and profe
     const mainCss = sharedCss + "\n" + (indexPage?.css || "");
     const mainJs = sharedJs + "\n" + (indexPage?.js || "");
 
-    // ── Save version history ──
+    // Save version history
     const { data: latestVersion } = await supabase
       .from("website_versions")
       .select("version_number")
@@ -539,7 +539,7 @@ Make it reflect the ${website.industry} industry with appropriate tone and profe
       model_used: selectedModel,
     });
 
-    // ── Save pages to website_pages table ──
+    // Save pages to website_pages
     // Delete old pages first
     await supabase.from("website_pages").delete().eq("website_id", websiteId);
 
@@ -558,7 +558,7 @@ Make it reflect the ${website.industry} industry with appropriate tone and profe
       await supabase.from("website_pages").insert(pageInserts);
     }
 
-    // ── Update main website record ──
+    // Update main website record
     const { error: updateError } = await supabase
       .from("websites")
       .update({

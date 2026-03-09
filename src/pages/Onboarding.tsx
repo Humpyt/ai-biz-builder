@@ -9,6 +9,7 @@ import { ArrowLeft, ArrowRight, Check, Sparkles, Loader2, CheckCircle2, XCircle 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { sitesDomain } from "@/lib/domains";
 
 const industries = [
   "Restaurant / Food", "Retail / Shop", "Salon / Beauty", "Health / Clinic",
@@ -250,7 +251,7 @@ const Onboarding = () => {
                               {subdomainIndicator()}
                             </div>
                           </div>
-                          <span className="text-sm text-muted-foreground whitespace-nowrap">.ugbiz.com</span>
+                          <span className="text-sm text-muted-foreground whitespace-nowrap">.{sitesDomain}</span>
                         </div>
                         {subdomainStatus === "taken" && (
                           <p className="text-xs text-destructive mt-1">This subdomain is already taken. Try another.</p>

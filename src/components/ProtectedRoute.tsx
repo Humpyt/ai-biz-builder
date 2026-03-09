@@ -20,7 +20,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/30">
         <div className="text-center space-y-4 max-w-md px-6">
-          <div className="text-4xl">🚫</div>
+          <div className="text-4xl font-semibold text-destructive">Blocked</div>
           <h1 className="text-xl font-bold text-foreground">Account Suspended</h1>
           <p className="text-muted-foreground text-sm">
             Your account has been suspended by an administrator. If you believe this is a mistake, please contact support.

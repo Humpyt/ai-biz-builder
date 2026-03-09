@@ -1,11 +1,12 @@
 import { motion } from "framer-motion";
 import { Globe, Palette, Rocket, Shield } from "lucide-react";
+import { sitesDomain } from "@/lib/domains";
 
 const features = [
   {
     icon: Globe,
     title: "Your Own Subdomain",
-    description: "Get yourname.ugbiz.com — a professional web address for your business instantly.",
+    description: `Get yourname.${sitesDomain} - a professional web address for your business instantly.`,
   },
   {
     icon: Palette,

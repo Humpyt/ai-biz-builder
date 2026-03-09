@@ -250,12 +250,12 @@ const Payment = () => {
                 animate={{ opacity: 1 }}
                 className="text-center text-sm text-muted-foreground mt-4"
               >
-                Check your phone for the payment prompt…
+                Check your phone for the payment prompt...
               </motion.p>
             )}
 
             <p className="text-xs text-muted-foreground text-center mt-4">
-              🔒 Mock payment — no real charges. Beyonic integration coming soon.
+              Mock payment - no real charges. Beyonic integration coming soon.
             </p>
           </div>
         </div>

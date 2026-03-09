@@ -111,9 +111,9 @@ const AdminSubscriptions = () => {
                     <TableCell className="font-medium capitalize">{s.plan}</TableCell>
                     <TableCell className="text-xs text-muted-foreground font-mono">{s.user_id.slice(0, 8)}...</TableCell>
                     <TableCell>{s.currency} {s.amount.toLocaleString()}</TableCell>
-                    <TableCell>{s.payment_method || "—"}</TableCell>
+                    <TableCell>{s.payment_method || "-"}</TableCell>
                     <TableCell><Badge variant={statusColor(s.status)}>{s.status}</Badge></TableCell>
-                    <TableCell>{s.expires_at ? format(new Date(s.expires_at), "MMM d, yyyy") : "—"}</TableCell>
+                    <TableCell>{s.expires_at ? format(new Date(s.expires_at), "MMM d, yyyy") : "-"}</TableCell>
                     <TableCell>
                       <Select value={s.status} onValueChange={(v) => handleStatusChange(s.id, v)}>
                         <SelectTrigger className="h-8 text-xs">

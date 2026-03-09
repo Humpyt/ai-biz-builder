@@ -1,6 +1,83 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const APP_DOMAIN = (Deno.env.get("APP_DOMAIN") || "").toLowerCase();
+const SITES_DOMAIN = (Deno.env.get("SITES_DOMAIN") || "").toLowerCase();
+const RESERVED_SUBDOMAINS = new Set(["api", "studio", "coolify", "www"]);
+
+function normalizeHost(host: string | null): string {
+  return (host || "").split(":")[0].trim().toLowerCase();
+}
+
+function extractSubdomain(req: Request, url: URL): string | null {
+  const querySubdomain = url.searchParams.get("subdomain");
+  if (querySubdomain) {
+    return querySubdomain.trim().toLowerCase();
+  }
+
+  const forwardedHost = normalizeHost(req.headers.get("x-forwarded-host"));
+  const requestHost = normalizeHost(req.headers.get("host"));
+  const host = forwardedHost || requestHost || normalizeHost(url.hostname);
+
+  if (!host) {
+    return null;
+  }
+
+  if (SITES_DOMAIN && host.endsWith(`.${SITES_DOMAIN}`)) {
+    return host.slice(0, -(SITES_DOMAIN.length + 1));
+  }
+
+  if (APP_DOMAIN && host.endsWith(`.${APP_DOMAIN}`) && host !== APP_DOMAIN) {
+    const candidate = host.slice(0, -(APP_DOMAIN.length + 1));
+    if (!RESERVED_SUBDOMAINS.has(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+function extractPageSlug(url: URL): string {
+  const queryPage = url.searchParams.get("page");
+  if (queryPage) {
+    return queryPage.replace(/^\//, "").replace(/\.html$/, "") || "index";
+  }
+
+  const normalizedPath = url.pathname
+    .replace(/^\/functions\/v1\/serve-website/, "")
+    .replace(/^\/+|\/+$/g, "");
+
+  if (!normalizedPath) {
+    return "index";
+  }
+
+  return normalizedPath.replace(/\.html$/, "") || "index";
+}
+
+function getSiteHost(subdomain: string): string {
+  if (SITES_DOMAIN) {
+    return `${subdomain}.${SITES_DOMAIN}`;
+  }
+
+  if (APP_DOMAIN) {
+    return `${subdomain}.${APP_DOMAIN}`;
+  }
+
+  return subdomain;
+}
+
+function buildPageHref(subdomain: string, slug: string, hostBasedRouting: boolean): string {
+  const normalizedSlug = slug.toLowerCase();
+
+  if (hostBasedRouting) {
+    return normalizedSlug === "index" ? "/" : `/${normalizedSlug}`;
+  }
+
+  return normalizedSlug === "index"
+    ? `?subdomain=${subdomain}&page=index`
+    : `?subdomain=${subdomain}&page=${normalizedSlug}`;
+}
+
 function buildChatWidget(websiteId: string, businessName: string): string {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const safeName = businessName.replace(/'/g, "\\'").replace(/"/g, "&quot;");
@@ -75,11 +152,12 @@ function buildChatWidget(websiteId: string, businessName: string): string {
 
 serve(async (req) => {
   const url = new URL(req.url);
-  const subdomain = url.searchParams.get("subdomain");
-  const page = url.searchParams.get("page") || "index";
+  const subdomain = extractSubdomain(req, url);
+  const slug = extractPageSlug(url);
+  const hostBasedRouting = !url.searchParams.get("subdomain");
 
   if (!subdomain) {
-    return new Response("<h1>404 — No subdomain specified</h1>", {
+    return new Response("<h1>404 - No subdomain specified</h1>", {
       status: 404,
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
@@ -101,7 +179,7 @@ serve(async (req) => {
 
     if (error || !website) {
       return new Response(
-        `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Not Found</title></head><body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0"><div style="text-align:center"><h1>Site Not Found</h1><p>No website exists at <strong>${subdomain}.ugbiz.com</strong></p></div></body></html>`,
+        `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Not Found</title></head><body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0"><div style="text-align:center"><h1>Site Not Found</h1><p>No website exists at <strong>${getSiteHost(subdomain)}</strong></p></div></body></html>`,
         { status: 404, headers: { "Content-Type": "text/html; charset=utf-8" } }
       );
     }
@@ -110,8 +188,6 @@ serve(async (req) => {
     let html = "";
     let css = "";
     let js = "";
-
-    const slug = page.replace(/\.html$/, "") || "index";
 
     const { data: pageData } = await supabase
       .from("website_pages")
@@ -132,20 +208,19 @@ serve(async (req) => {
     } else {
       // Page not found - show 404 within the site
       return new Response(
-        `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Page Not Found - ${website.name}</title></head><body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0"><div style="text-align:center"><h1>Page Not Found</h1><p>This page doesn't exist on ${website.name}.</p><a href="?subdomain=${subdomain}&page=index">Go to Home</a></div></body></html>`,
+        `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Page Not Found - ${website.name}</title></head><body style="font-family:system-ui;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0"><div style="text-align:center"><h1>Page Not Found</h1><p>This page doesn't exist on ${website.name}.</p><a href="${buildPageHref(subdomain, "index", hostBasedRouting)}">Go to Home</a></div></body></html>`,
         { status: 404, headers: { "Content-Type": "text/html; charset=utf-8" } }
       );
     }
 
-    // Rewrite internal page links to use query params
-    // Transform href="about.html" -> href="?subdomain=X&page=about"
+    // Rewrite internal page links for either host-based or query-based routing
     html = html.replace(
       /href=["'](index|about|services|contact)\.html["']/gi,
-      (_, pageName) => `href="?subdomain=${subdomain}&page=${pageName.toLowerCase()}"`
+      (_, pageName) => `href="${buildPageHref(subdomain, pageName.toLowerCase(), hostBasedRouting)}"`
     );
 
     const seoTitle = pageData?.title || website.name;
-    const seoDesc = (website.description || `${website.name} — a professional ${website.industry} business`).replace(/"/g, '&quot;');
+    const seoDesc = (website.description || `${website.name} - a professional ${website.industry} business`).replace(/"/g, '&quot;');
     const seoMeta = `
   <meta name="description" content="${seoDesc}">
   <meta property="og:title" content="${seoTitle.replace(/"/g, '&quot;')}">
@@ -229,7 +304,7 @@ ${chatWidgetCode}
     });
   } catch (e) {
     console.error("serve-website error:", e);
-    return new Response("<h1>500 — Server Error</h1>", {
+    return new Response("<h1>500 - Server Error</h1>", {
       status: 500,
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
